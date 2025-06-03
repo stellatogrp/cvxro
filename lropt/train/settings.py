@@ -251,11 +251,9 @@ class TrainerSettings:
         self.validate_percentage = 0.2
         self.validate_frequency = 10
         self.data = None
-        self.cov_gam = 0.5
-        self.cost_func = True
+        self.coverage_gamma = 0.5
+        self.constrain_cvar = True
         self.target_eta = 0.1
-        self.cvar_obj = False
-        self.cvar_obj_only = False
         self.avg_scale = 0
         self._generate_slots()
 

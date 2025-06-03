@@ -220,7 +220,7 @@ class Trainer:
 
             # TODO (bart): this is not ideal since we are copying the kwargs
             constraint_kwargs["alpha"] = alpha
-            if self.settings.cost_func:
+            if self.settings.constrain_cvar:
                 constraint_cost += self.simulator.constraint_cost(x_t, z_t, **constraint_kwargs)
             else:
                 input_tensors = self.create_input_tensors(x_t)
@@ -1068,25 +1068,23 @@ class Trainer:
             if not self._default_simulator:
                 avg_cost = avg_cost.repeat(3)
 
-            if self.settings.cost_func:
-                if self.settings.cvar_obj:
-                    fin_cost = cost
+            if self.settings.constrain_cvar:
+                if self.num_g_total > 1:
+                    fin_cost = (
+                        cost + lam @ torch.maximum(
+                            constr_cost,torch.zeros(self.num_g_total)) + (
+                                mu / 2) * (torch.linalg.norm(
+                                    torch.maximum(constr_cost,
+                                                    torch.zeros(self.num_g_total))) ** 2)
+                    )
                 else:
-                    if self.num_g_total > 1:
-                        fin_cost = (
-                            cost + lam @ torch.maximum(
-                                constr_cost,torch.zeros(self.num_g_total)) + (
-                                    mu / 2) * (torch.linalg.norm(
-                                        torch.maximum(constr_cost,
-                                                        torch.zeros(self.num_g_total))) ** 2)
-                        )
-                    else:
-                        fin_cost = cost + lam * torch.maximum(
-                            constr_cost,torch.zeros(1)) + (
-                                mu / 2) * (torch.maximum(
-                                    constr_cost,torch.zeros(1))**2)
+                    fin_cost = cost + lam * torch.maximum(
+                        constr_cost,torch.zeros(1)) + (
+                            mu / 2) * (torch.maximum(
+                                constr_cost,torch.zeros(1))**2)
             else:
-                fin_cost = (1-self.settings.cov_gam)*cost + self.settings.cov_gam*constr_cost
+                fin_cost = (1-self.settings.coverage_gamma)*cost + \
+                    self.settings.coverage_gamma*constr_cost
 
             if self.settings.line_search:
                 search_condition = fin_cost <= self.settings.line_search_threshold*prev_fin_cost
