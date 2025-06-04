@@ -1,13 +1,12 @@
+import numpy as np
+import scipy as sc
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from sklearn.neighbors import NearestNeighbors
 from torch.distributions.transforms import CorrCholeskyTransform
-import numpy as np
-import scipy as sc
 
 import lropt.train.settings as settings
-from sklearn.neighbors import NearestNeighbors
-
 
 torch.set_default_dtype(settings.DTYPE)
 

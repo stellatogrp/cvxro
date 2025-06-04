@@ -9,7 +9,7 @@ torch.set_default_dtype(settings.DTYPE)
 
 class LinearPredictor(torch.nn.Module):
 
-    def __init__(self,predict_mean = False, predict_cov= False, 
+    def __init__(self,predict_mean = False, predict_cov= False,
                  pretrain = False,epochs = 100,lr = 0,
                  knn_cov = False,
                  n_neighbors = 10, knn_scale = 1):
@@ -114,7 +114,7 @@ class LinearPredictor(torch.nn.Module):
         N = input.shape[0]
         input = input.detach().numpy()
         output = output.detach().numpy().reshape(N,-1)
-        m = output.shape[1]        
+        m = output.shape[1]
         stacked_context = np.hstack([input,np.ones((N,1))])
         mults = [np.linalg.lstsq(stacked_context,output[:,0])[0]]
         for i in range(1,m):
