@@ -251,7 +251,10 @@ class TrainerSettings:
         self.validate_percentage = 0.2
         self.validate_frequency = 10
         self.data = None
-
+        self.coverage_gamma = 0.5
+        self.constrain_cvar = True
+        self.target_eta = 0.1
+        self.avg_scale = 0
         self._generate_slots()
 
     def _attr_exists(self, name) -> None:

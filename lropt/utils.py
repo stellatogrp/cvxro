@@ -27,7 +27,7 @@ def gen_and_apply_chain(problem: Problem, reductions: list[Reduction]) -> \
             The problem to apply the chain on.
         reductions (list[Reduction]):
             A list containing the reductions to apply on the chain.
-    
+
     Returns:
         new_problem (Problem):
             The new problem after applying the chain.

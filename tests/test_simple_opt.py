@@ -30,7 +30,7 @@ class TestSimpleOpt(unittest.TestCase):
         self.B = np.random.uniform(low=self.low, high=self.high, size=(self.m, self.n))
         self.I = np.ones((self.m, self.n))
         self.i = np.ones(self.n)
-    
+
     def check_result(self, objective, constraints, target):
         """
         This helper function checks if a given test passes.
@@ -51,7 +51,7 @@ class TestSimpleOpt(unittest.TestCase):
         constraints =   [
                             self.x >= 1,
                         ]
-        
+
         self.check_result(objective, constraints, np.max((np.sum(self.a), np.sum(self.b))))
 
     def test_max_constraint(self):

@@ -9,12 +9,14 @@ torch.set_default_dtype(settings.DTYPE)
 
 class LinearPredictor(torch.nn.Module):
 
-    def __init__(self,predict_mean = False, pretrain = False,
-                 epochs = 100,lr = 0,knn_cov = False,
+    def __init__(self,predict_mean = False, predict_cov= False,
+                 pretrain = False,epochs = 100,lr = 0,
+                 knn_cov = False,
                  n_neighbors = 10, knn_scale = 1):
         super(LinearPredictor, self).__init__()
         self.predict = predict_mean
         self.pretrain = pretrain
+        self.predict_cov = predict_cov
         self.epochs = epochs
         self.lr = lr
         self.n_neighbors = n_neighbors
@@ -31,8 +33,12 @@ class LinearPredictor(torch.nn.Module):
         if self.predict:
             input_tensors = trainer.create_input_tensors(trainer.x_train_tch)
             self.gen_weights(input_tensors,trainer.u_train_tch)
-        if self.knn_cov:
+        if self.knn_cov or self.predict_cov:
             self.knn_fit(trainer)
+        if self.predict_cov:
+            input_tensors = trainer.create_input_tensors(trainer.x_train_tch)
+            output_tensors = self.knn_predict(input_tensors)
+            self.gen_weights_cov(input_tensors,output_tensors)
         self.train()
         if self.pretrain:
             self.pretrain_func(trainer)
@@ -97,6 +103,32 @@ class LinearPredictor(torch.nn.Module):
             mults_mean_bias, dtype=torch.double, requires_grad=True
         )
 
+    def gen_weights_cov(self,input,output):
+        """Set the weights of the predictor using lstsq
+        Args:
+        input
+            context data to train on
+        output
+            uncertain parameter data to train on
+        """
+        N = input.shape[0]
+        input = input.detach().numpy()
+        output = output.detach().numpy().reshape(N,-1)
+        m = output.shape[1]
+        stacked_context = np.hstack([input,np.ones((N,1))])
+        mults = [np.linalg.lstsq(stacked_context,output[:,0])[0]]
+        for i in range(1,m):
+            new_mults = np.linalg.lstsq(stacked_context,output[:,i])[0]
+            mults.append(new_mults)
+        mults_mean = np.vstack(mults)
+        mults_mean_weight = mults_mean[:,:-1]
+        mults_mean_bias = mults_mean[:,-1]
+        self.linear_cov.weight.data = torch.tensor(
+            mults_mean_weight, dtype=torch.double, requires_grad=True
+        )
+        self.linear_cov.bias.data = torch.tensor(
+            mults_mean_bias, dtype=torch.double, requires_grad=True)
+
     def forward(self, x,a_shape,b_shape,train_flag):
         """create a_tch and b_tch using the predictor"""
         out_a = self.linear_cov(x)
@@ -111,7 +143,7 @@ class LinearPredictor(torch.nn.Module):
         if not train_flag:
             a_tch = a_tch.detach().clone()
             b_tch = b_tch.detach().clone()
-        return a_tch, b_tch
+        return a_tch, b_tch, 1
 
     def knn_fit(self,trainer):
         knn = NearestNeighbors(n_neighbors=self.n_neighbors)
@@ -139,7 +171,7 @@ class LinearPredictor(torch.nn.Module):
             criterion = torch.nn.MSELoss()
             epochs=self.epochs
             for epoch in range(epochs):
-                _,yhat=trainer.create_predictor_tensors(trainer.x_train_tch)
+                _,yhat,_=trainer.create_predictor_tensors(trainer.x_train_tch)
                 loss=criterion(yhat,trainer.u_train_tch)
                 pred_optimizer.zero_grad()
                 loss.backward()

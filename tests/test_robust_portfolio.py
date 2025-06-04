@@ -82,4 +82,3 @@ class TestRobustPortfolio(unittest.TestCase):
         res2 = prob2.solve()
 
         self.assertAlmostEqual(res1, res2, delta=self.TOL)
-

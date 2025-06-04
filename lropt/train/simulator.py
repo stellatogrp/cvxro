@@ -25,10 +25,24 @@ class Simulator(ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def stage_cost_eval(self,x,u, **kwargs):
+    def stage_cost_avg(self,x,u, **kwargs):
         """ Create the current stage evaluation cost using the current state x
         and decision u. This may differ from the stage cost, which is used
         for training.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def stage_cost_cvar(self,x,u, **kwargs):
+        """ Create the current stage cvar cost using the current state x
+        and decision u. This may differ from the stage cost, which is used
+        for training.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def in_sample_obj(self,x,u,**kwargs):
+        """ Record the in-sample ojective value.
         """
         raise NotImplementedError()
 
@@ -66,11 +80,29 @@ class DefaultSimulator(ABC):
         """ Create the current stage cost using the current state x
         and decision u
         """
-        return self.trainer.settings.obj_scale*\
-            self.trainer.train_objective(kwargs['batch_int'], kwargs['eval_args'])
+        # if not (self.trainer.settings.cvar_obj or self.trainer.settings.cvar_obj_only):
+        #     return self.trainer.settings.obj_scale*self.trainer.train_objective(
+        #     kwargs['batch_int'], kwargs['eval_args'])
+        if self.trainer.settings.avg_scale == 0:
+            return self.trainer.settings.obj_scale*(
+                self.trainer.evaluation_cvar(kwargs['batch_int'],
+                                             kwargs['eval_args'],
+                                             self.trainer.settings.eta)[0])
+        else:
+            return self.trainer.settings.obj_scale*(
+                self.trainer.evaluation_cvar(kwargs['batch_int'],
+              kwargs['eval_args'],self.trainer.settings.eta)[0]) \
+                + self.trainer.settings.avg_scale*(
+                    self.trainer.evaluation_metric(
+                        kwargs['batch_int'],
+                        kwargs['eval_args'],
+                        self.trainer.settings.quantiles)[1])
 
 
-    def stage_cost_eval(self,x,u,**kwargs):
+    def in_sample_obj(self,x,u,**kwargs):
+        return self.trainer.train_objective(kwargs['batch_int'], kwargs['eval_args'])
+
+    def stage_cost_avg(self,x,u,**kwargs):
         """ Create the current stage evaluation cost using the current state x
         and decision u
         """
@@ -78,6 +110,9 @@ class DefaultSimulator(ABC):
             kwargs['batch_int'], kwargs['eval_args'],
             self.trainer.settings.quantiles),dtype=settings.DTYPE)
 
+    def stage_cost_cvar(self,x,u,**kwargs):
+        return self.trainer.evaluation_cvar(
+            kwargs['batch_int'], kwargs['eval_args'])
 
     def constraint_cost(self,x,u,**kwargs):
         """ Create the current constraint penalty cost
