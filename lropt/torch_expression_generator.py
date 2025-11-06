@@ -9,7 +9,6 @@ from cvxpy.expressions.leaf import Leaf
 from cvxtorch import TorchExpression, VariablesDict
 
 from lropt.train.batch import batchify
-from lropt.train.parameter import ContextParameter
 from lropt.uncertain_parameter import UncertainParameter
 
 
@@ -236,7 +235,7 @@ def get_eval_batch_size(problem) -> int:
 
     batch_size = None
     for var_param in problem.problem_canon.vars_params.values():
-        if not isinstance(var_param, (ContextParameter, UncertainParameter)):
+        if not isinstance(var_param, UncertainParameter):
             continue
         if not batch_size:
             batch_size = _get_curr_batch_size(var_param=var_param)
@@ -264,7 +263,6 @@ def get_eval_data(problem, tch_exp, batch_num: int) -> list[torch.Tensor]:
     Returns:
         A list of inputs (as torch.Tensor) for the torch expression.
     """
-    from lropt.train.parameter import ContextParameter
     from lropt.uncertain_parameter import UncertainParameter
 
     def _get_data(var_param, batch_num: int) -> torch.Tensor:
@@ -272,7 +270,7 @@ def get_eval_data(problem, tch_exp, batch_num: int) -> list[torch.Tensor]:
         This helper function returns eval_data for LROPT types, or value for CVXPY types.
         """
         # Get the data from the correct field.
-        if isinstance(var_param, (ContextParameter, UncertainParameter)):
+        if isinstance(var_param, UncertainParameter):
             value = var_param.eval_data[batch_num]
         else:
             value = var_param.value

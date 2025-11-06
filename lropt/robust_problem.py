@@ -387,11 +387,19 @@ class RobustProblem(Problem):
         return self.value
 
 
-    def evaluate(self) -> float:
+    def evaluate_sol_mean(self) -> float:
         """
-        Evaluates the out-of-sample value of the current solution and
+        Evaluates the mean of the out-of-sample values of the current
+          solution and cvxpy/context parameters.
+        """
+        import numpy as np
+        return np.mean(self.evaluate_sol())
+
+    def evaluate_sol(self) -> float:
+        """
+        Evaluates the out-of-sample values of the current solution and
         cvxpy/context parameters, with respect to the input data-set
-        of uncertain parameters. The dataset is taken from u.eval_data_sol
+        of uncertain parameters. The dataset is taken from u.eval_data
         for each uncertain parameter u.
         """
         batch_size = get_eval_batch_size(self)
@@ -402,16 +410,181 @@ class RobustProblem(Problem):
 
         res = [None]*batch_size
         for batch_num in range(batch_size):
-            eval_args = get_eval_data(self, tch_exp=tch_exp, batch_num=batch_num)
-            eval_res = eval_input(batch_int=batch_size,
+            eval_args = get_eval_data(self.problem_canon, tch_exp=tch_exp, batch_num=batch_num)
+            eval_res = eval_input(batch_int=1,
                        eval_func=tch_exp,
                        eval_args=eval_args,
                        init_val=0,
                        eval_input_case=EVAL_INPUT_CASE.MEAN,
                        quantiles=None,
-                       serial_flag=False)
+                       serial_flag=False,
+                       eta_target = 0)
             res[batch_num] = eval_res
         return res
+
+    def evaluate_mean(self) -> float:
+        """
+        When the context parameter(s) are provided with eval_data,
+        evaluates the mean of the out-of-sample values for all
+        context parameter(s) - uncertain parameter(s) pairs.
+        When the context parameters are not provided with eval_data,
+          return the same as evaluate_sol_mean().
+        """
+        import numpy as np
+        return np.mean(self.evaluate())
+
+    def check_multiple_contexts(self):
+        multiple_context = False
+        shape = None
+        cur_shape = None
+        varying_contexts = []
+        for context_param in self.x_parameters():
+            if context_param.eval_data is not None:
+                if not shape:
+                    shape = context_param.eval_data.shape[0]
+                else:
+                    cur_shape = context_param.eval_data.shape[0]
+                    if cur_shape != shape:
+                        raise ValueError("All ContextParameters must have" \
+                        " the same number of evaluation samples" \
+                        ", if provided.")
+                multiple_context = True
+                varying_contexts.append(context_param)
+        return multiple_context,varying_contexts,shape
+
+    def evaluate(self) -> float:
+        """
+        When the context parameter(s) are provided with eval_data,
+        evaluates the out-of-sample value for each context parameter(s) -
+          uncertain parameter(s) pair. The first dimension of the eval_data
+          for the context parameter(s) and uncertain parameter(s) must be
+          the same. The problem is re-solved for each context parameter(s)
+            value, and evaluated at the corresponding uncertain
+            parameter(s) value. Context parameters without eval_data
+            are treated as constants.
+        When the context parameters are not provided with eval_data,
+        return the same as evaluate_sol().
+        """
+        multiple_context, varying_contexts,shape = self.check_multiple_contexts()
+        batch_size = get_eval_batch_size(self)
+        if (shape is not None) and (shape!= batch_size):
+            raise ValueError("The number of evaluation samples for ContextParameters" \
+                             " does not match that of UncertainParameters.")
+
+        if multiple_context:
+            tch_exp = TorchExpression(self.eval_exp).torch_expression
+            res = [None]*batch_size
+            for batch_num in range(batch_size):
+                for context_param in varying_contexts:
+                    context_param.value = context_param.eval_data[batch_num]
+                self.solve()
+                eval_args = get_eval_data(self.problem_canon, tch_exp=tch_exp, batch_num=batch_num)
+                eval_res = eval_input(batch_int=1,
+                        eval_func=tch_exp,
+                        eval_args=eval_args,
+                        init_val=0,
+                        eval_input_case=EVAL_INPUT_CASE.MEAN,
+                        quantiles=None,
+                        serial_flag=False,
+                        eta_target = 0)
+                res[batch_num] = eval_res
+            return res
+        else:
+            return self.evaluate_sol()
+
+
+    def evaluate_probability_sol(self) -> float:
+        """
+        Evaluates the out-of-sample probability of constraint violation of the current solution and
+        cvxpy/context parameters, with respect to the input data-set
+        of uncertain parameters. The dataset is taken from u.eval_data
+        for each uncertain parameter u.
+        """
+        batch_size = get_eval_batch_size(self)
+        g_shapes =self.problem_canon.g_shapes
+
+        num_g_total = len(self.problem_canon.g)
+        res = torch.zeros((num_g_total, batch_size), dtype=torch.float64)
+        for batch_num in range(batch_size):
+            for k, g_k in enumerate(self.problem_canon.g):
+                # tch_exp = TorchExpression(self.eval_exp).torch_expression
+                eval_args = get_eval_data(self.problem_canon,
+                                          tch_exp=g_k.args[0],
+                                            batch_num=batch_num)
+                res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num] = eval_input(
+                    1,
+                    eval_func=g_k.args[0],
+                    eval_args=eval_args,
+                    init_val=res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num],
+                    eval_input_case=EVAL_INPUT_CASE.MAX,
+                    quantiles=None,
+                    eta_target = None,
+                    # serial_flag= True
+                )
+        return res.numpy()
+
+    def evaluate_probability_sol_mean(self) -> float:
+        import numpy as np
+        return np.mean(self.evaluate_probability_sol(),axis = 1)
+
+
+    def evaluate_probability(self) -> float:
+        """
+        When the context parameter(s) are provided with eval_data,
+        evaluates the out-of-sample probability of constraint violation for
+        each context parameter(s) - uncertain parameter(s) pair. The first
+          dimension of the eval_data for the context parameter(s) and
+          uncertain parameter(s) must be the same. The problem is re-solved
+          for each context parameter(s) value, and evaluated at
+          the corresponding uncertain parameter(s) value. Context
+            parameters without eval_data are treated as constants.
+        When the context parameters are not provided with
+        eval_data, return the same as evaluate_probability_sol().
+        """
+
+        multiple_context, varying_contexts,shape = self.check_multiple_contexts()
+        batch_size = get_eval_batch_size(self)
+        if (shape is not None ) and (shape!= batch_size):
+            raise ValueError("The number of evaluation samples "
+            "for ContextParameters" \
+                             " does not match that of UncertainParameters.")
+
+        if multiple_context:
+            g_shapes =self.problem_canon.g_shapes
+            num_g_total = len(self.problem_canon.g)
+            res = torch.zeros((num_g_total, batch_size), dtype=torch.float64)
+            for batch_num in range(batch_size):
+                for context_param in varying_contexts:
+                    context_param.value = context_param.eval_data[batch_num]
+                self.solve()
+                for k, g_k in enumerate(self.problem_canon.g):
+                    eval_args = get_eval_data(self.problem_canon,
+                                              tch_exp=g_k.args[0],
+                                                batch_num=batch_num)
+                    res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num] = eval_input(
+                        1,
+                        eval_func=g_k.args[0],
+                        eval_args=eval_args,
+                        init_val=res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num],
+                        eval_input_case=EVAL_INPUT_CASE.MAX,
+                        quantiles=None,
+                        eta_target = None
+                    )
+            return res.numpy()
+        else:
+            return self.evaluate_probability_sol()
+
+
+    def evaluate_probability_mean(self) -> float:
+        """When the context parameter(s) are provided with eval_data,
+        evaluates the mean out-of-sample probability of constraint
+        violation across all context parameter(s) - uncertain
+        parameter(s) pairs.
+        When the context parameters are not provided with eval_data,
+        return the same as evaluate_probability_sol_mean()."""
+        import numpy as np
+        return np.mean(self.evaluate_probability(),axis = 1)
+
 
     def order_args(self, z_batch: list[torch.Tensor], x_batch: list[torch.Tensor],
                    u_batch: list[torch.Tensor] | torch.Tensor):
