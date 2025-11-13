@@ -151,11 +151,13 @@ def generate_torch_expressions(problem, eval_exp: Expression | None = None):
     # Create an object (list) that has all constraint.args[0] from all these constraints.
     # new_constraint = cp.NonPos(cp.Maximum(all of these expressions))
     # new_constraint is fed to gen_torch_exp, but I shouldn't modify problem.constraints
-    for max_id in problem.constraints_by_type.keys():
-        if max_id == problem.CERTAIN_ID:  # Nothing to do with certain constraints
-            continue
-        elif max_id == problem.UNCERTAIN_NO_MAX_ID:
-            constraints = problem.constraints_by_type[max_id]
+    for max_id in problem.is_max_constraint.keys():
+        # if not from max uncertain, take constraint as is
+        if not problem.is_max_constraint[max_id]:
+        # if max_id == problem.CERTAIN_ID:  # Nothing to do with certain constraints
+        #     continue
+        # elif max_id == problem.UNCERTAIN_NO_MAX_ID:
+            constraints = problem.ordered_uncertain_no_max_constraints[max_id]
         else:
             # Create a constraint from all the constraints of this max_id
             args = [constraint.args[0] for constraint in problem.constraints_by_type[max_id]]

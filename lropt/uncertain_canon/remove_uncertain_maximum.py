@@ -87,6 +87,9 @@ class RemoveSumOfMaxOfUncertain(Reduction):
         # of these constraints.
         # The new problem has: problem.constraints (all three), and three separate lists.
         new_constraints = []
+        # keep track of whether the constraint is from max uncertain or not
+        ordered_uncertain_no_max_constraints = {}
+        is_max_constraint = {}
         # constraints_by_type is a dictionary from ID of the uncertain max constraint to all of its
         # constraints. There are two special IDs: UNCERTAIN_NO_MAX_ID and CERTAIN_ID for the list of
         # all uncertain non-max constraints/certain constraints, respectively.
@@ -109,10 +112,16 @@ class RemoveSumOfMaxOfUncertain(Reduction):
                     new_constraints += [canon_constr]
                     inverse_data.cons_id_map.update({constraint.id: canon_constr.id})
                     constraints_by_type[max_id].append(canon_constr)
+                # mark the max_id as from max uncertain
+                is_max_constraint[max_id] = True
             else:
-                type_id = (
-                    UNCERTAIN_NO_MAX_ID if has_unc_param_constraint(constraint) else CERTAIN_ID
-                )
+                if has_unc_param_constraint(constraint):
+                    type_id = UNCERTAIN_NO_MAX_ID
+                    # add constraint and mark as not from max uncertain
+                    ordered_uncertain_no_max_constraints[max_id] = [constraint]
+                    is_max_constraint[max_id] = False
+                else:
+                    type_id = CERTAIN_ID
                 constraints_by_type[type_id] += [constraint]
                 new_constraints += [constraint]
 
@@ -121,6 +130,8 @@ class RemoveSumOfMaxOfUncertain(Reduction):
             objective=epigraph_problem.objective, constraints=new_constraints, eval_exp=eval_exp
         )
         new_problem.constraints_by_type = constraints_by_type
+        new_problem.ordered_uncertain_no_max_constraints = ordered_uncertain_no_max_constraints
+        new_problem.is_max_constraint = is_max_constraint
         new_problem._solver = problem._solver
 
         return new_problem, inverse_data

@@ -2,6 +2,7 @@ import warnings
 from enum import Enum
 
 import cvxpy as cp
+import numpy as np
 import torch
 from cvxpy import Parameter as OrigParameter
 from cvxpy import error
@@ -138,6 +139,8 @@ class RobustProblem(Problem):
                     c.save_dual_value(solution.dual_vars[c.id])
             # Eliminate confusion of problem.value versus objective.value.
             self._value = solution.opt_val
+            # self.objective._value = self._value
+
 
         elif solution.status in s.INF_OR_UNB:
             for v in self.variables():
@@ -146,6 +149,7 @@ class RobustProblem(Problem):
                 for dv in constr.dual_variables:
                     dv.save_value(None)
             self._value = solution.opt_val
+            # self.objective._value = self._value
         else:
             raise ValueError("Cannot unpack invalid solution: %s" % solution)
 
@@ -190,6 +194,7 @@ class RobustProblem(Problem):
                     "information.")
         self.unpack(solution)
         self._solver_stats = SolverStats.from_dict(self._solution.attr, solvername)
+        # self.objective._value = self._value
 
     def _validate_uncertain_parameters(self):
         """
@@ -420,7 +425,7 @@ class RobustProblem(Problem):
                        serial_flag=False,
                        eta_target = 0)
             res[batch_num] = eval_res
-        return res
+        return np.array(res)
 
     def evaluate_mean(self) -> float:
         """
@@ -488,12 +493,12 @@ class RobustProblem(Problem):
                         serial_flag=False,
                         eta_target = 0)
                 res[batch_num] = eval_res
-            return res
+            return np.array(res)
         else:
             return self.evaluate_sol()
 
 
-    def evaluate_probability_sol(self) -> float:
+    def evaluate_vio_indicator_sol(self) -> float:
         """
         Evaluates the out-of-sample probability of constraint violation of the current solution and
         cvxpy/context parameters, with respect to the input data-set
@@ -503,7 +508,7 @@ class RobustProblem(Problem):
         batch_size = get_eval_batch_size(self)
         g_shapes =self.problem_canon.g_shapes
 
-        num_g_total = len(self.problem_canon.g)
+        num_g_total = self.problem_canon.num_g_total
         res = torch.zeros((num_g_total, batch_size), dtype=torch.float64)
         for batch_num in range(batch_size):
             for k, g_k in enumerate(self.problem_canon.g):
@@ -523,12 +528,12 @@ class RobustProblem(Problem):
                 )
         return res.numpy()
 
-    def evaluate_probability_sol_mean(self) -> float:
+    def evaluate_vio_probability_sol(self) -> float:
         import numpy as np
-        return np.mean(self.evaluate_probability_sol(),axis = 1)
+        return np.mean(self.evaluate_vio_indicator_sol(),axis = 1)
 
 
-    def evaluate_probability(self) -> float:
+    def evaluate_vio_indicator(self) -> float:
         """
         When the context parameter(s) are provided with eval_data,
         evaluates the out-of-sample probability of constraint violation for
@@ -551,7 +556,7 @@ class RobustProblem(Problem):
 
         if multiple_context:
             g_shapes =self.problem_canon.g_shapes
-            num_g_total = len(self.problem_canon.g)
+            num_g_total = self.problem_canon.num_g_total
             res = torch.zeros((num_g_total, batch_size), dtype=torch.float64)
             for batch_num in range(batch_size):
                 for context_param in varying_contexts:
@@ -572,10 +577,10 @@ class RobustProblem(Problem):
                     )
             return res.numpy()
         else:
-            return self.evaluate_probability_sol()
+            return self.evaluate_vio_indicator_sol()
 
 
-    def evaluate_probability_mean(self) -> float:
+    def evaluate_vio_probability(self) -> float:
         """When the context parameter(s) are provided with eval_data,
         evaluates the mean out-of-sample probability of constraint
         violation across all context parameter(s) - uncertain
@@ -583,7 +588,7 @@ class RobustProblem(Problem):
         When the context parameters are not provided with eval_data,
         return the same as evaluate_probability_sol_mean()."""
         import numpy as np
-        return np.mean(self.evaluate_probability(),axis = 1)
+        return np.mean(self.evaluate_vio_indicator(),axis = 1)
 
 
     def order_args(self, z_batch: list[torch.Tensor], x_batch: list[torch.Tensor],

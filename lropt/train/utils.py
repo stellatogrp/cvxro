@@ -44,7 +44,8 @@ def eval_prob_constr_violation(
     Returns:
         The average among all evaluated J x N pairs
     """
-    num_g_total = len(g)
+    #num_g_total = len(g)
+    num_g_total = sum(g_shapes)
     G = torch.zeros((num_g_total, batch_int), dtype=settings.DTYPE)
     for k, g_k in enumerate(g):
         G[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)])] = eval_input(

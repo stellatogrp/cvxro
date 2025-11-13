@@ -396,6 +396,9 @@ class UncertainCanonicalization(Reduction):
         new_problem = RobustProblem(objective=problem.objective, constraints=new_constraints,
                                                 cons_data=cons_data, eval_exp=eval_exp)
         new_problem.constraints_by_type = constraints_by_type
+        new_problem.ordered_uncertain_no_max_constraints = \
+            problem.ordered_uncertain_no_max_constraints
+        new_problem.is_max_constraint = problem.is_max_constraint
 
         return new_problem, inverse_data
 
