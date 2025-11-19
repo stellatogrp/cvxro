@@ -48,7 +48,7 @@ class Norm(UncertaintySet):
 
     def __init__(self, dimension = None, p=2, rho=1.,
                  a=None, b=None, c=None, d=None, data=None,
-                 ub=None, lb=None, sum_eq=None):
+                 ub=None, lb=None, sum_eq=None,eval_data = None):
         if rho <= 0:
             raise ValueError("Rho value must be positive.")
         if p < 0.:
@@ -70,7 +70,7 @@ class Norm(UncertaintySet):
 
         self.affine_transform_temp = None
         self.affine_transform = None
-
+        self.eval_data = eval_data
         self._dimension = dimension
         self._p = p
         self._rho = rho

@@ -51,7 +51,7 @@ class Budget(UncertaintySet):
 
     def __init__(self, dimension=None, rho1=1., rho2=1.,
                  a=None, b=None, c=None, d=None, data=None,
-                  ub=None, lb=None, sum_eq=None):
+                  ub=None, lb=None, sum_eq=None,eval_data=None):
         if rho2 <= 0 or rho1 <= 0:
             raise ValueError("Rho values must be positive.")
 
@@ -70,6 +70,7 @@ class Budget(UncertaintySet):
                 raise ValueError("You must provide A if you provide a dimension without data.")
 
         self.affine_transform_temp = None
+        self.eval_data = eval_data
         self.affine_transform = None
         self._dimension = dimension
         self._rho1 = rho1

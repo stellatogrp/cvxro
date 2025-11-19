@@ -317,15 +317,21 @@ class RemoveUncertainty(Reduction):
         This function removes uncertainty. Connects constraints if is mro and
         has a maximum constraint
         """
-
         unc_param_list = cur_cons_data['unc_param_list']
+        has_scenario = False
+        has_not_scenario = False
         for unc_param in unc_param_list:
             is_mro = isinstance(unc_param.uncertainty_set, MRO)
+            has_scenario += isinstance(unc_param.uncertainty_set, Scenario)
+            has_not_scenario += not has_scenario
             if is_mro and (len(unc_param_list) != 1):
                 raise ValueError("Multiple uncertainty sets is not " + \
                                   "supported for MRO uncertainty")
 
-        if isinstance(unc_param.uncertainty_set, Scenario):
+        if has_not_scenario and has_scenario:
+            raise ValueError("Cannot mix Scenario uncertainty set with " \
+            "other uncertainty sets")
+        if has_scenario:
             canon_constr, aux_constr, new_lmbda, new_sval = \
                 self.scenario_helper(cur_cons_data)
         else:

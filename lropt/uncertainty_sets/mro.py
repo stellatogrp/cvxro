@@ -16,12 +16,13 @@ class MRO(UncertaintySet):
 
     def __init__(self, K=1, rho=1, data=None, train_data = None, power=1, p=2,
                  a=None, b=None, train=False, c=None, d=None,
-                    ub=None, lb=None, sum_eq=None):
-
+                    ub=None, lb=None, sum_eq=None, DRO=False,eval_data=None):
         if data is None:
             raise ValueError("You must provide data")
         if train_data is None:
             train_data = data
+        if DRO:
+            K = data.shape[0]
         self._dimension = data.shape[1]
         if train:
             a = ShapeParameter((self._dimension, self._dimension))
@@ -41,6 +42,7 @@ class MRO(UncertaintySet):
         self.affine_transform_temp = None
         self.affine_transform = None
         self._data = data
+        self.eval_data = eval_data
         self._N = train_data.shape[0]
         self._K = K
         self._power = power
@@ -204,3 +206,19 @@ class MRO(UncertaintySet):
             constr += [supp_newvar >= 0]
             return var@self.Dbar[k_ind] + \
                 self._d@supp_newvar-sval[k_ind], constr, lmbda, sval
+
+
+class WDRO(MRO):
+    r"""
+    Uncertainty set where the parameter is constrained to lie in a
+    Wasserstein ball of the form
+    .. math::
+        \{ \sum( (1/N)||u_k - d_k ||^\text{power}_p)\leq \rho\\}
+    """
+
+    def __init__(self, rho=1, data=None, train_data = None, power=1, p=2,
+                 a=None, b=None, train=False, c=None, d=None,
+                    ub=None, lb=None, sum_eq=None,eval_data=None):
+        super(WDRO, self).__init__(rho=rho, data=data, train_data = train_data, power=power, p=p,
+                 a=a, b=b, train=train, c=c, d=d,
+                    ub=ub, lb=lb, sum_eq=sum_eq,DRO = True,eval_data=eval_data)

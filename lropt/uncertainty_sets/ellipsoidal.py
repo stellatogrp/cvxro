@@ -45,10 +45,10 @@ class Ellipsoidal(Norm):
 
     def __init__(self, dimension = None, rho=1., p=2,
                  a=None, b=None, c= None, d = None,
-                 data=None, ub=None, lb=None, sum_eq=None):
+                 data=None, ub=None, lb=None, sum_eq=None,eval_data = None):
 
         super(Ellipsoidal, self).__init__(
             dimension=dimension,
             p=p,
             rho=rho,
-            a=a, b=b,c = c, d = d, data=data, ub=ub, lb=lb, sum_eq=sum_eq)
+            a=a, b=b,c = c, d = d, data=data, ub=ub, lb=lb, sum_eq=sum_eq,eval_data=eval_data)

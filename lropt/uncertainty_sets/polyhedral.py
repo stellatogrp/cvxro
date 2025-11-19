@@ -35,7 +35,7 @@ class Polyhedral(UncertaintySet):
     """
 
     def __init__(self, lhs, rhs, c=None, d=None, dimension = None, a = None, b=None,
-                 affine_transform=None, data = None, ub=None, lb=None,sum_eq=None):
+                 affine_transform=None, data = None, ub=None, lb=None,sum_eq=None,eval_data=None):
 
         if data is not None:
             raise ValueError("You cannot train a polyhedral set")
@@ -62,7 +62,7 @@ class Polyhedral(UncertaintySet):
                     raise ValueError("Mismatching dimension for A.")
             if a is None:
                 raise ValueError("You must provide A if you provide a dimension.")
-
+        self.eval_data = eval_data
         self._a = a
         self._b = b
         self._dimension = dimension

@@ -1876,7 +1876,7 @@ class TrainLoopStats:
         prob_violation_test:
             Probability of constraint violation over test set
         prob_violation_train:
-            Probability fo constraint violation over train set
+            Probability of constraint violation over train set
         violation_test:
             Violation of learning constraint over test set
         violation_train:

@@ -498,7 +498,7 @@ class RobustProblem(Problem):
             return self.evaluate_sol()
 
 
-    def evaluate_vio_indicator_sol(self) -> float:
+    def violation_indicator_sol(self) -> float:
         """
         Evaluates the out-of-sample probability of constraint violation of the current solution and
         cvxpy/context parameters, with respect to the input data-set
@@ -528,12 +528,12 @@ class RobustProblem(Problem):
                 )
         return res.numpy()
 
-    def evaluate_vio_probability_sol(self) -> float:
+    def violation_probability_sol(self) -> float:
         import numpy as np
-        return np.mean(self.evaluate_vio_indicator_sol(),axis = 1)
+        return np.mean(self.violation_indicator_sol(),axis = 1)
 
 
-    def evaluate_vio_indicator(self) -> float:
+    def violation_indicator(self) -> float:
         """
         When the context parameter(s) are provided with eval_data,
         evaluates the out-of-sample probability of constraint violation for
@@ -577,10 +577,10 @@ class RobustProblem(Problem):
                     )
             return res.numpy()
         else:
-            return self.evaluate_vio_indicator_sol()
+            return self.violation_indicator_sol()
 
 
-    def evaluate_vio_probability(self) -> float:
+    def violation_probability(self) -> float:
         """When the context parameter(s) are provided with eval_data,
         evaluates the mean out-of-sample probability of constraint
         violation across all context parameter(s) - uncertain
@@ -588,7 +588,7 @@ class RobustProblem(Problem):
         When the context parameters are not provided with eval_data,
         return the same as evaluate_probability_sol_mean()."""
         import numpy as np
-        return np.mean(self.evaluate_vio_indicator(),axis = 1)
+        return np.mean(self.violation_indicator(),axis = 1)
 
 
     def order_args(self, z_batch: list[torch.Tensor], x_batch: list[torch.Tensor],

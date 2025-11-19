@@ -23,7 +23,7 @@ class Scenario(UncertaintySet):
         Scenario "uncertainty set"
     """
 
-    def __init__(self, data, cartesian = True):
+    def __init__(self, data, eval_data = None,cartesian = True):
 
         if data is None:
             raise ValueError("You need a dataset for the scenario approach")
@@ -33,7 +33,7 @@ class Scenario(UncertaintySet):
         self.affine_transform = None
         self.affine_transform_temp = None
 
-
+        self.eval_data = eval_data
         self._a = None
         self._b = None
         self._dimension = None

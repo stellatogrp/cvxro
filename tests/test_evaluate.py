@@ -192,8 +192,8 @@ class TestSolutionProbability(unittest.TestCase):
                                           u_data@x_robust-b + 0.3
                                           >= TOLERANCE_DEFAULT]),axis = 1)
 
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator_sol(), axis = 1)
-        eval_value_mean = prob_robust.evaluate_vio_probability_sol()
+        eval_value = np.mean(prob_robust.violation_indicator_sol(), axis = 1)
+        eval_value_mean = prob_robust.violation_probability_sol()
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
 
@@ -238,8 +238,8 @@ class TestSolutionProbability(unittest.TestCase):
         a.eval_data = u_data
         self.context_param.eval_data = x_data
 
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator_sol(),axis = 1)
-        eval_value_mean = prob_robust.evaluate_vio_probability_sol()
+        eval_value = np.mean(prob_robust.violation_indicator_sol(),axis = 1)
+        eval_value_mean = prob_robust.violation_probability_sol()
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
 
@@ -289,8 +289,8 @@ class TestSolutionProbability(unittest.TestCase):
 
         actual_value = np.mean(np.hstack(eval_probs),axis=1)
 
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator_sol(),axis=1)
-        eval_value_mean = prob_robust.evaluate_vio_probability_sol()
+        eval_value = np.mean(prob_robust.violation_indicator_sol(),axis=1)
+        eval_value_mean = prob_robust.violation_probability_sol()
 
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
@@ -485,7 +485,7 @@ class TestProbability(unittest.TestCase):
             prob_robust.solve(solver=SOLVER, **SOLVER_SETTINGS)
             x_robust = x.value
             a.eval_data = [u_data[i]]
-            eval_probs.append(prob_robust.evaluate_vio_indicator_sol())
+            eval_probs.append(prob_robust.violation_indicator_sol())
             eval_probs2.append(np.vstack([u_data[i]@x_robust-b >=TOLERANCE_DEFAULT,
                            -u_data[i] @x_robust + 0.3
                            + x_data[i]+ x2_data[i] - t.value >= TOLERANCE_DEFAULT]))
@@ -497,8 +497,8 @@ class TestProbability(unittest.TestCase):
         context_2.eval_data = x_data
         a.eval_data = u_data
 
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator(),axis=1)
-        eval_value_mean = prob_robust.evaluate_vio_probability()
+        eval_value = np.mean(prob_robust.violation_indicator(),axis=1)
+        eval_value_mean = prob_robust.violation_probability()
 
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
@@ -535,7 +535,7 @@ class TestProbability(unittest.TestCase):
             prob_robust.solve(solver=SOLVER, **SOLVER_SETTINGS)
             a.eval_data = [u_data[i]]
             a1.eval_data = [u1_data[i]]
-            eval_probs.append(prob_robust.evaluate_vio_indicator_sol())
+            eval_probs.append(prob_robust.violation_indicator_sol())
             eval_probs1.append(np.vstack([u_data[i]@x.value-b
                                            >=TOLERANCE_DEFAULT,
                                            u1_data[i]@x.value -x_data[i] -b
@@ -550,8 +550,8 @@ class TestProbability(unittest.TestCase):
         a.eval_data = u_data
         self.context_param.eval_data = x_data
         a1.eval_data = u1_data
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator(),axis=1)
-        eval_value_mean = prob_robust.evaluate_vio_probability()
+        eval_value = np.mean(prob_robust.violation_indicator(),axis=1)
+        eval_value_mean = prob_robust.violation_probability()
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
 
@@ -601,7 +601,7 @@ class TestProbability_uncertain_obj(unittest.TestCase):
             prob_robust.solve(solver=SOLVER, **SOLVER_SETTINGS)
             x_robust = x.value
             a.eval_data = [u_data[i]]
-            eval_probs.append(prob_robust.evaluate_vio_indicator_sol())
+            eval_probs.append(prob_robust.violation_indicator_sol())
             eval_probs2.append(np.vstack([
                            -u_data[i] @x_robust + 0.3
                            + x_data[i]- prob_robust.value >= TOLERANCE_DEFAULT,
@@ -613,8 +613,8 @@ class TestProbability_uncertain_obj(unittest.TestCase):
         self.context_param.eval_data = x_data
         a.eval_data = u_data
 
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator(),axis=1)
-        eval_value_mean = prob_robust.evaluate_vio_probability()
+        eval_value = np.mean(prob_robust.violation_indicator(),axis=1)
+        eval_value_mean = prob_robust.violation_probability()
 
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
@@ -650,7 +650,7 @@ class TestProbability_uncertain_obj(unittest.TestCase):
             prob_robust.solve(solver=SOLVER, **SOLVER_SETTINGS)
             a.eval_data = [u_data[i]]
             a1.eval_data = [u1_data[i]]
-            eval_probs.append(prob_robust.evaluate_vio_indicator_sol())
+            eval_probs.append(prob_robust.violation_indicator_sol())
             eval_probs1.append(np.vstack([
                            -u_data[i] @x.value + u1_data[i]@x.value + 0.3
                            + x_data[i] - prob_robust.value >= TOLERANCE_DEFAULT, u_data[i]@x.value-b
@@ -665,8 +665,8 @@ class TestProbability_uncertain_obj(unittest.TestCase):
         a.eval_data = u_data
         self.context_param.eval_data = x_data
         a1.eval_data = u1_data
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator(),axis=1)
-        eval_value_mean = prob_robust.evaluate_vio_probability()
+        eval_value = np.mean(prob_robust.violation_indicator(),axis=1)
+        eval_value_mean = prob_robust.violation_probability()
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
 
@@ -708,7 +708,7 @@ class TestProbability_uncertain_obj(unittest.TestCase):
             prob_robust.solve(solver=SOLVER, **SOLVER_SETTINGS)
             a.eval_data = [u_data[i]]
             a1.eval_data = [u1_data[i]]
-            eval_probs.append(prob_robust.evaluate_vio_indicator_sol())
+            eval_probs.append(prob_robust.violation_indicator_sol())
             eval_probs1.append(np.vstack([
                            -u_data[i] @x.value + u1_data[i]@x.value + 0.3
                            + x_data[i] - prob_robust.value >= TOLERANCE_DEFAULT, u_data[i]@x.value-b
@@ -727,7 +727,7 @@ class TestProbability_uncertain_obj(unittest.TestCase):
         a.eval_data = u_data
         self.context_param.eval_data = x_data
         a1.eval_data = u1_data
-        eval_value = np.mean(prob_robust.evaluate_vio_indicator(),axis=1)
-        eval_value_mean = prob_robust.evaluate_vio_probability()
+        eval_value = np.mean(prob_robust.violation_indicator(),axis=1)
+        eval_value_mean = prob_robust.violation_probability()
         npt.assert_allclose(eval_value, actual_value, rtol=RTOL, atol=ATOL)
         npt.assert_allclose(eval_value,eval_value_mean, rtol=RTOL, atol=ATOL)
