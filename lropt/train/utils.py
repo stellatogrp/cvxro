@@ -409,3 +409,72 @@ def restore_step_size(opt: torch.optim.Optimizer, num_steps: int,step_mult) -> N
         # More stable than 2**num_steps
         for _ in range(num_steps):
             group["lr"] *= (1/step_mult)
+
+
+def gen_indices(train=None, test=None, validate=None):
+    """
+    Concatenate provided datasets and return concatenated data plus indices for
+    the original splits.
+
+    Args:
+        train (array-like or None): Training dataset (n_train x d) or None.
+        test (array-like or None): Testing dataset (n_test x d) or None.
+        validate (array-like or None): Validation dataset (n_validate x d) or None.
+
+    Returns:
+        tuple:
+            - concatenated (np.ndarray): Concatenation of the non-None inputs
+              in the order (train, validate, test).
+            - indices (dict): Dictionary with keys `'train'`, `'validate'`,
+              `'test'` mapping to numpy integer index arrays pointing into the
+              concatenated array. If a split was None, its index array will be
+              an empty integer array.
+
+    Notes:
+        - The function attempts to convert inputs to numpy arrays using
+          `np.asarray`. It does no additional validation of dimensionality
+          beyond what numpy.concatenate requires.
+    """
+    parts = []
+    indices = {"train": np.array([], dtype=int),
+               "validate": np.array([], dtype=int),
+               "test": np.array([], dtype=int)}
+    cur_index = 0
+
+    def _prepare(arr):
+        if arr is None:
+            return None
+        a = np.asarray(arr)
+        # Ensure 2D for consistency when concatenating single-row vectors
+        if a.ndim == 1:
+            a = a.reshape((a.shape[0],))
+        return a
+
+    t = _prepare(train)
+    v = _prepare(validate)
+    te = _prepare(test)
+
+    if t is not None and t.size:
+        parts.append(t)
+        n = t.shape[0]
+        indices["train"] = np.arange(cur_index, cur_index + n, dtype=int)
+        cur_index += n
+
+    if v is not None and v.size:
+        parts.append(v)
+        n = v.shape[0]
+        indices["validate"] = np.arange(cur_index, cur_index + n, dtype=int)
+        cur_index += n
+
+    if te is not None and te.size:
+        parts.append(te)
+        n = te.shape[0]
+        indices["test"] = np.arange(cur_index, cur_index + n, dtype=int)
+        cur_index += n
+
+    if len(parts) == 0:
+        concatenated = np.empty((0,))
+    else:
+        concatenated = np.concatenate(parts, axis=0)
+
+    return concatenated, indices

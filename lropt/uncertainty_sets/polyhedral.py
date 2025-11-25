@@ -27,6 +27,11 @@ class Polyhedral(UncertaintySet):
         By default None.
     sum_eq: np.array | float, optinal
         vector or float defining an equality constraint for the uncertain vector. By default None.
+    indices_dict: dict, optional
+        Optional mapping with keys 'train', 'test', and 'validate' that specify
+        integer index arrays or boolean masks to split the provided `data` into
+        training, testing, and validation subsets. If provided, the indices are
+        validated against `data.shape[0]` and normalized to integer index arrays.
 
     Returns
     -------
@@ -35,10 +40,11 @@ class Polyhedral(UncertaintySet):
     """
 
     def __init__(self, lhs, rhs, c=None, d=None, dimension = None, a = None, b=None,
-                 affine_transform=None, data = None, ub=None, lb=None,sum_eq=None,eval_data=None):
+                 affine_transform=None, data = None, ub=None,
+                 lb=None, sum_eq=None, eval_data=None, indices_dict=None):
 
-        if data is not None:
-            raise ValueError("You cannot train a polyhedral set")
+        # if data is not None:
+        #     raise ValueError("You cannot train a polyhedral set")
 
         if affine_transform:
             check_affine_transform(affine_transform)
@@ -77,6 +83,13 @@ class Polyhedral(UncertaintySet):
         self._sum_eq = sum_eq
         self._define_support = False
         self._rho_mult = SizeParameter(value=1.)
+        from lropt.uncertainty_sets.utils import check_indices_dict
+        if indices_dict is not None:
+            # polyhedral sets may not have data; require data for validation
+            self.indices_dict = check_indices_dict(indices_dict,
+                     None if self._data is None else self._data.shape[0])
+        else:
+            self.indices_dict = None
 
 
 

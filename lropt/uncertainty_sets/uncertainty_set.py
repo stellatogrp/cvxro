@@ -7,6 +7,22 @@ import numpy as np
 SUPPORT_TYPE = Enum("SUPPORT_TYPE", "UPPER_BOUND LOWER_BOUND SUM_EQUALITY")
 
 class UncertaintySet(ABC):
+    """
+    Base class for uncertainty sets.
+
+    Parameters
+    ----------
+    indices_dict : dict, optional
+        Optional mapping with keys 'train', 'test', and 'validate' that specify
+        integer index arrays or boolean boolean masks to split the provided
+        `data` into training, testing, and validation subsets. When provided,
+        the uncertainty set (and training utilities) will validate and use
+        these explicit splits. Note: `data` must be supplied for validation
+        and subsetting to work.
+    """
+
+    # Optional explicit split indices that can be provided by users or settings
+    indices_dict = None
 
     # @abstractmethod
     # def canonicalize(self, x, var):

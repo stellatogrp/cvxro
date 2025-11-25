@@ -428,15 +428,91 @@ class Trainer:
         # Split the dataset into train_set and test, and create Tensors
         np.random.seed(seed)
         assert (test_percentage + validate_percentage) < 1
-        num_test = max(1, int(self.settings.data.shape[0] * test_percentage))
-        num_validate = max(1, int(self.settings.data.shape[0] * validate_percentage))
-        num_train = int(self.settings.data.shape[0] - num_test-num_validate)
-        test_and_validate_indices = np.random.choice(
-            self.settings.data.shape[0], num_test+num_validate, replace=False)
-        test_indices = test_and_validate_indices[:num_test]
-        validate_indices = test_and_validate_indices[num_test:]
-        train_indices = [i for i in range(
-            self.settings.data.shape[0]) if i not in test_and_validate_indices]
+        n_data = self.settings.data.shape[0]
+        num_test = max(1, int(n_data * test_percentage))
+        num_validate = max(1, int(n_data * validate_percentage))
+        num_train = int(n_data - num_test - num_validate)
+
+        # If the user provided explicit indices in settings.indices_dict, validate and use them
+        indices_dict = getattr(self.settings, "indices_dict", None)
+        if indices_dict is not None:
+            # Expected keys optionally: 'train', 'test', 'validate'
+            # Convert to numpy arrays of ints when present
+            provided = {}
+            for key in ("train", "test", "validate"):
+                if key in indices_dict and indices_dict[key] is not None:
+                    provided[key] = np.asarray(indices_dict[key], dtype=int)
+
+            # If the dict was empty, fall back to random selection
+            if not provided:
+                indices_dict = None
+            else:
+                # Validate indices are within bounds
+                for key, arr in provided.items():
+                    if np.any(arr < 0) or np.any(arr >= n_data):
+                        raise ValueError(f"indices_dict['{key}'] contains out-of-bounds indices")
+
+                # Check for overlap among provided indices
+                all_provided = np.concatenate(
+                    [provided[k] for k in provided]) if provided \
+                        else np.array([], dtype=int)
+                if all_provided.size != 0 and np.unique(all_provided).size != all_provided.size:
+                    raise ValueError("Overlapping indices found in settings.indices_dict")
+
+                # Assign provided indices (some may be missing)
+                test_indices = provided.get("test", None)
+                validate_indices = provided.get("validate", None)
+                train_indices = provided.get("train", None)
+
+                # Infer missing splits deterministically from remaining indices
+                used = np.array([], dtype=int)
+                if test_indices is not None:
+                    used = np.concatenate([used, np.asarray(test_indices, dtype=int)])
+                if validate_indices is not None:
+                    used = np.concatenate([used, np.asarray(validate_indices, dtype=int)])
+                if train_indices is not None:
+                    used = np.concatenate([used, np.asarray(train_indices, dtype=int)])
+                used = np.unique(used) if used.size else np.array([], dtype=int)
+
+                remaining = np.array([i for i in range(n_data) if i not in used], dtype=int)
+                # If train missing, put remaining into train
+                if train_indices is None:
+                    train_indices = remaining
+                    remaining = np.array([], dtype=int)
+                # If test missing, put remaining into test
+                if test_indices is None and remaining.size:
+                    test_indices = remaining
+                    remaining = np.array([], dtype=int)
+                # If validate missing, put any remaining into validate
+                if validate_indices is None and remaining.size:
+                    validate_indices = remaining
+                    remaining = np.array([], dtype=int)
+
+                # Ensure all indices are numpy arrays
+                test_indices = np.asarray(
+                    test_indices, dtype=int) if test_indices \
+                        is not None else np.array([], dtype=int)
+                validate_indices = np.asarray(
+                    validate_indices, dtype=int) if \
+                        validate_indices is not None else np.array(
+                            [], dtype=int)
+                train_indices = np.asarray(
+                    train_indices, dtype=int) if \
+                        train_indices is not None else np.array([], dtype=int)
+
+                # Update counts to reflect provided/derived indices
+                num_test = int(test_indices.size)
+                num_validate = int(validate_indices.size)
+                num_train = int(train_indices.size)
+
+        if indices_dict is None:
+            # No indices_dict provided; do random selection
+            test_and_validate_indices = np.random.choice(
+                n_data, num_test + num_validate, replace=False)
+            test_indices = test_and_validate_indices[:num_test]
+            validate_indices = test_and_validate_indices[num_test:]
+            train_indices = np.array([i for i in range(
+                n_data) if i not in test_and_validate_indices], dtype=int)
 
         unc_train_set = np.array([self.settings.data[i] for i in train_indices])
         unc_validate_set = np.array(
@@ -1432,6 +1508,8 @@ class Trainer:
         self._init_context = self.settings.init_context
         if self.settings.data is None:
             self.settings.data = self.unc_set.data
+        if self.settings.indices_dict is None:
+            self.settings.indices_dict = self.unc_set.indices_dict
         self._split_dataset(self.settings.test_percentage,
                             self.settings.validate_percentage, self.settings.seed)
 
@@ -1722,6 +1800,8 @@ class Trainer:
 
         self.train_flag = False
         df = pd.DataFrame(columns=["Rho"])
+        if self.settings.indices_dict is None:
+            self.settings.indices_dict = self.unc_set.indices_dict
         self._split_dataset(settings.test_percentage, settings.validate_percentage, settings.seed)
         self.cvxpylayer = self.create_cvxpylayer()
 

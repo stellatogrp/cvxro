@@ -3,6 +3,7 @@ from cvxpy import Variable, norm
 
 from lropt.train.parameter import ShapeParameter, SizeParameter
 from lropt.uncertainty_sets.uncertainty_set import UncertaintySet
+from lropt.uncertainty_sets.utils import check_indices_dict
 
 
 class Norm(UncertaintySet):
@@ -39,6 +40,11 @@ class Norm(UncertaintySet):
         By default None.
     sum_eq: np.array | float, optinal
         vector or float defining an equality constraint for the uncertain vector. By default None.
+    indices_dict: dict, optional
+        Optional mapping with keys 'train', 'test', and 'validate' that specify
+        integer index arrays or boolean masks to split the provided `data` into
+        training, testing, and validation subsets. If provided, the indices are
+        validated against `data.shape[0]` and normalized to integer index arrays.
 
     Returns
     -------
@@ -48,7 +54,7 @@ class Norm(UncertaintySet):
 
     def __init__(self, dimension = None, p=2, rho=1.,
                  a=None, b=None, c=None, d=None, data=None,
-                 ub=None, lb=None, sum_eq=None,eval_data = None):
+                 ub=None, lb=None, sum_eq=None, eval_data = None, indices_dict=None):
         if rho <= 0:
             raise ValueError("Rho value must be positive.")
         if p < 0.:
@@ -77,6 +83,12 @@ class Norm(UncertaintySet):
         self._data = data
         self._a = a
         self._b = b
+        # validate and normalize indices_dict if provided
+        if indices_dict is not None:
+            normalized = check_indices_dict(indices_dict, None if data is None else data.shape[0])
+            self.indices_dict = normalized
+        else:
+            self.indices_dict = None
         self._trained = False
         self._c = c
         self._d = d

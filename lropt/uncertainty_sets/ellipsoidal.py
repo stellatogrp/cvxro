@@ -37,6 +37,11 @@ class Ellipsoidal(Norm):
         By default None.
     sum_eq: np.array | float, optinal
         vector or float defining an equality constraint for the uncertain vector. By default None.
+    indices_dict: dict, optional
+        Optional mapping with keys 'train', 'test', and 'validate' that specify
+        integer index arrays or boolean masks to split the provided `data` into
+        training, testing, and validation subsets. If provided, the indices are
+        validated against `data.shape[0]` and normalized to integer index arrays.
     Returns
     -------
     Ellipsoidal
@@ -45,10 +50,11 @@ class Ellipsoidal(Norm):
 
     def __init__(self, dimension = None, rho=1., p=2,
                  a=None, b=None, c= None, d = None,
-                 data=None, ub=None, lb=None, sum_eq=None,eval_data = None):
+                 data=None, ub=None, lb=None, sum_eq=None, eval_data = None, indices_dict=None):
 
         super(Ellipsoidal, self).__init__(
             dimension=dimension,
             p=p,
             rho=rho,
-            a=a, b=b,c = c, d = d, data=data, ub=ub, lb=lb, sum_eq=sum_eq,eval_data=eval_data)
+            a=a, b=b, c=c, d=d, data=data, ub=ub, lb=lb,
+            sum_eq=sum_eq, eval_data=eval_data, indices_dict=indices_dict)

@@ -42,6 +42,11 @@ class Budget(UncertaintySet):
         By default None.
     sum_eq: np.array | float, optinal
         vector or float defining an equality constraint for the uncertain vector. By default None.
+    indices_dict: dict, optional
+        Optional mapping with keys 'train', 'test', and 'validate' that specify
+        integer index arrays or boolean masks to split the provided `data` into
+        training, testing, and validation subsets. If provided, the indices are
+        validated against `data.shape[0]` and normalized to integer index arrays.
 
     Returns
     -------
@@ -51,7 +56,7 @@ class Budget(UncertaintySet):
 
     def __init__(self, dimension=None, rho1=1., rho2=1.,
                  a=None, b=None, c=None, d=None, data=None,
-                  ub=None, lb=None, sum_eq=None,eval_data=None):
+                  ub=None, lb=None, sum_eq=None, eval_data=None, indices_dict=None):
         if rho2 <= 0 or rho1 <= 0:
             raise ValueError("Rho values must be positive.")
 
@@ -86,6 +91,12 @@ class Budget(UncertaintySet):
         self._lb = lb
         self._sum_eq = sum_eq
         self._rho_mult = SizeParameter(value=1.)
+        from lropt.uncertainty_sets.utils import check_indices_dict
+        if indices_dict is not None:
+            self.indices_dict = check_indices_dict(
+                indices_dict, None if data is None else data.shape[0])
+        else:
+            self.indices_dict = None
 
 
     @property
