@@ -358,10 +358,17 @@ class RobustProblem(Problem):
                         self.remove_uncertainty(solver= solver)
         else:
             solver_func = super(RobustProblem, self).solve
+        # Refresh trained/contextual uncertainty-set parameters before solving
+        # so the solver uses updated contextual shape parameters.
+        try:
+            self._update_trained_uncertainty_sets_for_current_context()
+        except Exception:
+            pass
+
         solver_func(solver=solver, warm_start=warm_start, verbose=verbose, gp=gp, qcp=qcp,
-                                            requires_grad=requires_grad, enforce_dpp=enforce_dpp,
-                                            ignore_dpp=ignore_dpp, canon_backend=canon_backend,
-                                            **kwargs)
+                    requires_grad=requires_grad, enforce_dpp=enforce_dpp,
+                    ignore_dpp=ignore_dpp, canon_backend=canon_backend,
+                    **kwargs)
 
     def _helper_solve(self,
                 solver: str = None,
@@ -415,7 +422,6 @@ class RobustProblem(Problem):
         # If uncertainty sets were trained, update their parameters for evaluation.
         # For contextual sets, use the trainer to create predictor tensors using
         # current context parameter values; for non-contextual sets, use trained values.
-        self._update_trained_uncertainty_sets_for_current_context()
         self.solve()
 
         # Build batched eval_args (each entry has batch dimension as first axis)
@@ -518,11 +524,6 @@ class RobustProblem(Problem):
             for batch_num in range(batch_size):
                 for context_param in varying_contexts:
                     context_param.value = context_param.eval_data[batch_num]
-
-                # If uncertainty sets were trained and contextual, update their
-                # shape parameters for this context before re-solving.
-                self._update_trained_uncertainty_sets_for_current_context()
-
                 self.solve()
                 eval_args = get_eval_data(self.problem_canon, tch_exp=tch_exp, batch_num=batch_num)
                 eval_res = eval_input(batch_int=1,
@@ -551,6 +552,7 @@ class RobustProblem(Problem):
 
         num_g_total = self.problem_canon.num_g_total
         res = torch.zeros((num_g_total, batch_size), dtype=torch.float64)
+        self.solve()
 
         # Attempt batched evaluation per constraint g_k
         try:
