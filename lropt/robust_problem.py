@@ -409,23 +409,53 @@ class RobustProblem(Problem):
         """
         batch_size = get_eval_batch_size(self)
 
-        #Get TorchExpression related data
-        #Not actually torch expression, but partial.
+        # Get TorchExpression related data
         tch_exp = TorchExpression(self.eval_exp).torch_expression
 
-        res = [None]*batch_size
+        # Build batched eval_args (each entry has batch dimension as first axis)
+        per_arg_lists = None
         for batch_num in range(batch_size):
             eval_args = get_eval_data(self.problem_canon, tch_exp=tch_exp, batch_num=batch_num)
-            eval_res = eval_input(batch_int=1,
-                       eval_func=tch_exp,
-                       eval_args=eval_args,
-                       init_val=0,
-                       eval_input_case=EVAL_INPUT_CASE.MEAN,
-                       quantiles=None,
-                       serial_flag=False,
-                       eta_target = 0)
-            res[batch_num] = eval_res
-        return np.array(res)
+            if per_arg_lists is None:
+                per_arg_lists = [[] for _ in range(len(eval_args))]
+            for i, a in enumerate(eval_args):
+                per_arg_lists[i].append(a)
+
+        import torch as _torch
+        try:
+            batched_args = [_torch.stack(lst, dim=0) for lst in per_arg_lists]
+            # Use eval_input once with the whole batch
+            batched_res = eval_input(
+                batch_int=batch_size,
+                eval_func=tch_exp,
+                eval_args=batched_args,
+                init_val=None,
+                eval_input_case=EVAL_INPUT_CASE.MEAN,
+                quantiles=None,
+                serial_flag=False,
+                eta_target=0,
+            )
+            # Convert to numpy if tensor
+            if isinstance(batched_res, _torch.Tensor):
+                return batched_res.detach().cpu().numpy()
+            return np.array(batched_res)
+        except Exception:
+            # Fallback to original per-sample evaluation
+            res = [None] * batch_size
+            for batch_num in range(batch_size):
+                eval_args = get_eval_data(self.problem_canon, tch_exp=tch_exp, batch_num=batch_num)
+                eval_res = eval_input(
+                    batch_int=1,
+                    eval_func=tch_exp,
+                    eval_args=eval_args,
+                    init_val=0,
+                    eval_input_case=EVAL_INPUT_CASE.MEAN,
+                    quantiles=None,
+                    serial_flag=False,
+                    eta_target=0,
+                )
+                res[batch_num] = eval_res
+            return np.array(res)
 
     def evaluate_mean(self) -> float:
         """
@@ -506,27 +536,69 @@ class RobustProblem(Problem):
         for each uncertain parameter u.
         """
         batch_size = get_eval_batch_size(self)
-        g_shapes =self.problem_canon.g_shapes
+        g_shapes = self.problem_canon.g_shapes
 
         num_g_total = self.problem_canon.num_g_total
         res = torch.zeros((num_g_total, batch_size), dtype=torch.float64)
-        for batch_num in range(batch_size):
+
+        # Attempt batched evaluation per constraint g_k
+        try:
             for k, g_k in enumerate(self.problem_canon.g):
-                # tch_exp = TorchExpression(self.eval_exp).torch_expression
-                eval_args = get_eval_data(self.problem_canon,
-                                          tch_exp=g_k.args[0],
-                                            batch_num=batch_num)
-                res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num] = eval_input(
-                    1,
+                rows = slice(sum(g_shapes[:k]), sum(g_shapes[: (k + 1)]))
+                # collect per-argument lists across batch
+                per_arg_lists = None
+                for batch_num in range(batch_size):
+                    eval_args = get_eval_data(self.problem_canon,
+                                              tch_exp=g_k.args[0],
+                                                batch_num=batch_num)
+                    if per_arg_lists is None:
+                        per_arg_lists = [[] for _ in range(len(eval_args))]
+                    for i, a in enumerate(eval_args):
+                        per_arg_lists[i].append(a)
+
+                import torch as _torch
+                batched_args = [_torch.stack(lst, dim=0) for lst in per_arg_lists]
+
+                # call eval_input once for the whole batch; pass existing slice as init_val
+                init_val = res[rows, :]
+                batched_out = eval_input(
+                    batch_int=batch_size,
                     eval_func=g_k.args[0],
-                    eval_args=eval_args,
-                    init_val=res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num],
+                    eval_args=batched_args,
+                    init_val=init_val,
                     eval_input_case=EVAL_INPUT_CASE.MAX,
                     quantiles=None,
-                    eta_target = None,
-                    # serial_flag= True
+                    eta_target=None,
                 )
-        return res.numpy()
+
+                # Ensure shape matches (g_shape, batch_size)
+                if isinstance(batched_out, _torch.Tensor):
+                    # If necessary, adjust orientation
+                    if batched_out.shape[0] == batch_size and batched_out.ndim == 2:
+                        # shape (batch_size, g_shape) -> transpose
+                        batched_out = batched_out.permute(1, 0)
+                    res[rows, :] = batched_out
+                else:
+                    # convert to tensor and assign
+                    res[rows, :] = torch.tensor(batched_out, dtype=res.dtype)
+            return res.numpy()
+        except Exception:
+            # Fallback to original per-sample loop
+            for batch_num in range(batch_size):
+                for k, g_k in enumerate(self.problem_canon.g):
+                    eval_args = get_eval_data(self.problem_canon,
+                                              tch_exp=g_k.args[0],
+                                                batch_num=batch_num)
+                    res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num] = eval_input(
+                        1,
+                        eval_func=g_k.args[0],
+                        eval_args=eval_args,
+                        init_val=res[sum(g_shapes[:k]) : sum(g_shapes[: (k + 1)]),batch_num],
+                        eval_input_case=EVAL_INPUT_CASE.MAX,
+                        quantiles=None,
+                        eta_target = None,
+                    )
+            return res.numpy()
 
     def violation_probability_sol(self) -> float:
         import numpy as np
