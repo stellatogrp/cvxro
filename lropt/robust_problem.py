@@ -412,6 +412,12 @@ class RobustProblem(Problem):
         # Get TorchExpression related data
         tch_exp = TorchExpression(self.eval_exp).torch_expression
 
+        # If uncertainty sets were trained, update their parameters for evaluation.
+        # For contextual sets, use the trainer to create predictor tensors using
+        # current context parameter values; for non-contextual sets, use trained values.
+        self._update_trained_uncertainty_sets_for_current_context()
+        self.solve()
+
         # Build batched eval_args (each entry has batch dimension as first axis)
         per_arg_lists = None
         for batch_num in range(batch_size):
@@ -512,6 +518,11 @@ class RobustProblem(Problem):
             for batch_num in range(batch_size):
                 for context_param in varying_contexts:
                     context_param.value = context_param.eval_data[batch_num]
+
+                # If uncertainty sets were trained and contextual, update their
+                # shape parameters for this context before re-solving.
+                self._update_trained_uncertainty_sets_for_current_context()
+
                 self.solve()
                 eval_args = get_eval_data(self.problem_canon, tch_exp=tch_exp, batch_num=batch_num)
                 eval_res = eval_input(batch_int=1,
@@ -630,6 +641,8 @@ class RobustProblem(Problem):
             g_shapes =self.problem_canon.g_shapes
             num_g_total = self.problem_canon.num_g_total
             res = torch.zeros((num_g_total, batch_size), dtype=torch.float64)
+            # Before evaluating, refresh trained uncertainty-set params for current context
+            self._update_trained_uncertainty_sets_for_current_context()
             for batch_num in range(batch_size):
                 for context_param in varying_contexts:
                     context_param.value = context_param.eval_data[batch_num]
@@ -699,3 +712,58 @@ class RobustProblem(Problem):
             args.append(append_item)
 
         return args
+
+    def _update_trained_uncertainty_sets_for_current_context(self):
+        """
+        If uncertainty sets were trained and are contextual, update their
+        shape parameters (`a.value`, `b.value`) using the trainer's
+        predictors for the current context parameter values.
+
+        This function is defensive: any error during prediction or update
+        is swallowed to avoid breaking evaluation.
+        """
+        try:
+            trainer = getattr(self, "trainer", None)
+            for uparam in self.uncertain_parameters():
+                unc_set = uparam.uncertainty_set
+                if getattr(unc_set, "_trained", False):
+                    # Contextual: need trainer and predictor
+                    if trainer is not None and getattr(trainer.settings, "contextual", False):
+                        # Build x_batch as list of 1-sized batch tensors from current context values
+                        x_params = self.x_parameters()
+                        x_batch = []
+                        for xp in x_params:
+                            val = getattr(xp, "value", None)
+                            if val is None:
+                                # fallback to first row of eval_data or data if available
+                                if hasattr(xp, "data") and xp.data is not None:
+                                    val = xp.data[0]
+                                else:
+                                    raise ValueError(
+                                        f"Context parameter {xp} has no value"
+                                            +" for contextual evaluation"
+                                    )
+                            t = torch.tensor(val, dtype=torch.get_default_dtype())
+                            if t.ndim == 1:
+                                t = t.unsqueeze(0)
+                            else:
+                                t = t.unsqueeze(0)
+                            x_batch.append(t)
+
+                        a_tch, b_tch, _radius = trainer.create_predictor_tensors(x_batch)
+                        try:
+                            a_val = a_tch[0].detach().cpu().numpy()
+                        except Exception:
+                            a_val = a_tch.detach().cpu().numpy()
+                        try:
+                            b_val = b_tch[0].detach().cpu().numpy()
+                        except Exception:
+                            b_val = b_tch.detach().cpu().numpy()
+                        unc_set.a.value = a_val
+                        unc_set.b.value = b_val
+                    else:
+                        # Non-contextual: assume trained values already stored in uncertainty set
+                        pass
+        except Exception:
+            # Don't fail evaluation if updating trained params fails; fallback to existing values
+            pass
