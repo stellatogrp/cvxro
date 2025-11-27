@@ -253,7 +253,8 @@ class TrainerSettings:
         self.data = None
         self.indices_dict = None
         self.coverage_gamma = 0.5
-        self.constrain_cvar = True
+        self.constraint_cvar = True
+        self.delage_coverage = False
         self.target_eta = 0.1
         self.avg_scale = 0
         self._generate_slots()

@@ -113,7 +113,7 @@ class TestEvaluateLearned(unittest.TestCase):
         trainer = Trainer(prob)
         settings = TrainerSettings()
         settings.contextual = True
-        settings.predictor = LinearPredictor(predict_mean=True)
+        settings.predictor = LinearPredictor(predict_mean=True,knn_cov = True)
         settings.num_iter = 3
         settings.parallel = False
         trainer.train(settings=settings)

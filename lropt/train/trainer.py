@@ -220,9 +220,9 @@ class Trainer:
 
             # TODO (bart): this is not ideal since we are copying the kwargs
             constraint_kwargs["alpha"] = alpha
-            if self.settings.constrain_cvar:
+            if self.settings.constraint_cvar:
                 constraint_cost += self.simulator.constraint_cost(x_t, z_t, **constraint_kwargs)
-            else:
+            elif self.settings.delage_coverage:
                 input_tensors = self.create_input_tensors(x_t)
                 coverage_loss, _ = self.dist_loss(a_tch,b_tch,radius,input_tensors,u_0)
                 constraint_cost += coverage_loss
@@ -1144,7 +1144,7 @@ class Trainer:
             if not self._default_simulator:
                 avg_cost = avg_cost.repeat(3)
 
-            if self.settings.constrain_cvar:
+            if self.settings.constraint_cvar:
                 if self.num_g_total > 1:
                     fin_cost = (
                         cost + lam @ torch.maximum(
@@ -1158,9 +1158,11 @@ class Trainer:
                         constr_cost,torch.zeros(1)) + (
                             mu / 2) * (torch.maximum(
                                 constr_cost,torch.zeros(1))**2)
-            else:
+            elif self.settings.delage_coverage:
                 fin_cost = (1-self.settings.coverage_gamma)*cost + \
                     self.settings.coverage_gamma*constr_cost
+            else:
+                fin_cost = cost
 
             if self.settings.line_search:
                 search_condition = fin_cost <= self.settings.line_search_threshold*prev_fin_cost
