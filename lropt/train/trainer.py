@@ -1596,9 +1596,9 @@ class Trainer:
             else:
                 self.settings.lr = self.settings.lr
             if self.settings.num_iter_size:
-                self.settings.num_iter = self.settings.num_iter_size
+                self.settings.num_iter = self.settings.num_iter_size + 1
             else:
-                self.settings.num_iter = self.settings.num_iter
+                self.settings.num_iter = self.settings.num_iter + 1
             self.settings.init_mu = mu_val[index_chosen]
             if not self.settings.parallel:
                 res = []
