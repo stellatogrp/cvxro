@@ -160,7 +160,8 @@ def generate_torch_expressions(problem, eval_exp: Expression | None = None):
             constraints = problem.ordered_uncertain_no_max_constraints[max_id]
         else:
             # Create a constraint from all the constraints of this max_id
-            args = [constraint.args[0] for constraint in problem.constraints_by_type[max_id]]
+            args = [cp.reshape(constraint.args[0],(1,)) for \
+                    constraint in problem.constraints_by_type[max_id]]
             constraints = [cp.NonNeg(-cp.maximum(*args))]
         for constraint in constraints:  # NOT problem.constraints: these are the new constraints
             g = gen_torch_exp(constraint, problem.vars_params)
@@ -195,9 +196,9 @@ def generate_h_functions(problem):
     import lropt.train.settings as settings
 
     h_funcs = []
-    for g in problem.g:
-        def hg(*args, **kwargs):
-            return (torch.maximum(g(*args) - kwargs["alpha"], torch.tensor(0.0,
+    for indg,g in enumerate(problem.g):
+        def hg(*args, indg=indg, **kwargs):
+            return (torch.maximum(problem.g[indg](*args) - kwargs["alpha"], torch.tensor(0.0,
                             dtype=settings.DTYPE, requires_grad=problem.train_flag))/kwargs["eta"])
 
         h_funcs.append(hg)

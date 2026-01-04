@@ -1529,6 +1529,7 @@ class Trainer:
         else:
             self.simulator = DefaultSimulator(self)
             self._default_simulator = True
+        self.settings.num_iter += 1
         self.violation_checker = ViolationChecker(self.cvxpylayer, self.problem_no_unc.constraints)
         self._max_iter_line_search = self.settings.max_iter_line_search
         self.x_endind = self.settings.x_endind
@@ -1597,8 +1598,6 @@ class Trainer:
                 self.settings.lr = self.settings.lr
             if self.settings.num_iter_size:
                 self.settings.num_iter = self.settings.num_iter_size + 1
-            else:
-                self.settings.num_iter = self.settings.num_iter + 1
             self.settings.init_mu = mu_val[index_chosen]
             if not self.settings.parallel:
                 res = []
@@ -1672,7 +1671,7 @@ class Trainer:
             predictors_list = [],rho_list = []):
         """This function computes the validation and testing values for a
         list of predictors"""
-        settings.num_iter = 1
+        settings.num_iter = 0
         settings.max_batch_size = np.inf
         test_dfs = []
         validate_dfs = []

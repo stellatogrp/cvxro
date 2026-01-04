@@ -133,8 +133,8 @@ A_fin = result.A
 b_fin = result.b
 
 
-# untrained linear initailization (steps = 1, look at initalized set for linear predictor)
-trainer_settings.num_iter = 1
+# untrained linear initailization (steps = 0, look at initalized set for linear predictor)
+trainer_settings.num_iter = 0
 result2 = trainer.train(trainer_settings=trainer_settings)
 df2 = result.df
 A_fin2 = result.A
@@ -142,7 +142,7 @@ b_fin2 = result.b
 
 
 # cov_pred initialization, untrained (look at initalized set for covariance predictor)
-trainer_settings.num_iter = 1
+trainer_settings.num_iter = 0
 trainer_settings.covpred = True
 result3 = trainer.train(trainer_settings=trainer_settings)
 df3 = result3.df
