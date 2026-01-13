@@ -82,7 +82,9 @@ class MRO(UncertaintySet):
         self._dimension = train_data.shape[1]
         if train:
             a = ShapeParameter((self._dimension, self._dimension))
+            a.value = np.eye(self._dimension)
             b = ShapeParameter(self._dimension)
+            b.value = np.zeros(self._dimension)
 
         if (not train) and (a is not None):
             if a.shape[1] != self._dimension:

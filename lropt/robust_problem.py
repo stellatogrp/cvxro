@@ -341,7 +341,7 @@ class RobustProblem(Problem):
                     if not isinstance(unc_param_lst[0].uncertainty_set, MRO):
                         self.trainer = Trainer(self)
                         trainer_settings = TrainerSettings()
-                        _ = self.trainer.train(trainer_settings=
+                        _ = self.trainer.train(settings=
                                                trainer_settings)
                         for x in self.x_parameters():
                             x.value = x.data[0]
@@ -349,7 +349,7 @@ class RobustProblem(Problem):
                     elif unc_param_lst[0].uncertainty_set._train:
                         self.trainer = Trainer(self)
                         trainer_settings = TrainerSettings()
-                        _ = self.trainer.train(trainer_settings=
+                        _ = self.trainer.train(settings=
                                                trainer_settings)
                         for x in self.x_parameters():
                             x.value = x.data[0]

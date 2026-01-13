@@ -65,7 +65,9 @@ class Norm(UncertaintySet):
             if dimension is None:
                 dimension = dat_shape
             a = ShapeParameter((dat_shape, dimension))
+            a.value = np.eye(dat_shape, dimension)
             b = ShapeParameter(dat_shape)
+            b.value = np.mean(data, axis=0)
 
         if dimension is not None:
             if a is not None:

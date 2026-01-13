@@ -60,7 +60,9 @@ class Polyhedral(UncertaintySet):
             if dimension is None:
                 dimension = dat_shape
             a = ShapeParameter((dat_shape, dimension))
+            a.value = np.eye(dat_shape, dimension)
             b = ShapeParameter(dat_shape)
+            b.value = np.zeros(dat_shape)
 
         if dimension is not None:
             if a is not None:

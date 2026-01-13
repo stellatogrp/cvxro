@@ -1529,7 +1529,8 @@ class Trainer:
         else:
             self.simulator = DefaultSimulator(self)
             self._default_simulator = True
-        self.settings.num_iter += 1
+        if self.settings.num_iter == 0:
+            self.settings.num_iter = 1
         self.violation_checker = ViolationChecker(self.cvxpylayer, self.problem_no_unc.constraints)
         self._max_iter_line_search = self.settings.max_iter_line_search
         self.x_endind = self.settings.x_endind
@@ -1597,7 +1598,7 @@ class Trainer:
             else:
                 self.settings.lr = self.settings.lr
             if self.settings.num_iter_size:
-                self.settings.num_iter = self.settings.num_iter_size + 1
+                self.settings.num_iter = self.settings.num_iter_size
             self.settings.init_mu = mu_val[index_chosen]
             if not self.settings.parallel:
                 res = []
