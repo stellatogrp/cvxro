@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lropt"
+name = "cvxro"
 description = "A package for decision-making under uncertainty, using data."
 readme = "README.md"
 license = { text = "Apache 2.0" }
@@ -28,11 +28,11 @@ dependencies = [
 requires-python = ">= 3.12"
 
 [tool.setuptools]
-packages = ["lropt"]
+packages = ["cvxro"]
 
 [tool.setuptools_scm]
 # To infer version automatically from git
-write_to = "lropt/_version.py"
+write_to = "cvxro/_version.py"
 
 
 [project.optional-dependencies]

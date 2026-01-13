@@ -49,11 +49,11 @@ def _(mo):
 def _():
     import numpy as np
     import cvxpy as cp
-    import lropt
+    import cvxro
     import pandas as pd
     import matplotlib.pyplot as plt
     from matplotlib.patches import Circle
-    return Circle, cp, lropt, np, pd, plt
+    return Circle, cp, cvxro, np, pd, plt
 
 
 @app.cell(hide_code=True)
@@ -97,7 +97,7 @@ def _(mo):
 
 
 @app.cell
-def _(C, DATA_1, DATA_2, M, N, cp, lropt):
+def _(C, DATA_1, DATA_2, M, N, cp, cvxro):
     def solve_svm(uncertainty_set1=None, uncertainty_set2 = None):
         w = cp.Variable(N)
         b = cp.Variable()
@@ -105,15 +105,15 @@ def _(C, DATA_1, DATA_2, M, N, cp, lropt):
         objective = cp.Minimize(0.5 * cp.norm2(w)**2 + C * (cp.sum(xi)))
         constraints = []
         if uncertainty_set1:
-            u1 = lropt.UncertainParameter(N, uncertainty_set=uncertainty_set1)
-            u2 = lropt.UncertainParameter(N, uncertainty_set=uncertainty_set2)
+            u1 = cvxro.UncertainParameter(N, uncertainty_set=uncertainty_set1)
+            u2 = cvxro.UncertainParameter(N, uncertainty_set=uncertainty_set2)
         else:
             u1 = 0
             u2 = 0
         for i in range(M):
             constraints.append(w@(DATA_1[i] + u1) + b >= 1 - xi[i])
             constraints.append(-(w@(DATA_2[i]+ u2) + b) >= 1 - xi[i])
-        prob = lropt.RobustProblem(objective, constraints)
+        prob = cvxro.RobustProblem(objective, constraints)
         prob.solve()
 
         return w.value, b.value
@@ -158,7 +158,7 @@ def _(
     MU_2,
     SIG_1,
     SIG_2,
-    lropt,
+    cvxro,
     np,
     pd,
     plot_ellipsoid,
@@ -169,7 +169,7 @@ def _(
     fig, ax = plt.subplots(1, 2, figsize=(16, 8))
 
     for i, rho in enumerate(rho_values):
-        w_opt, b_opt = solve_svm(lropt.Ellipsoidal(p=2, rho=rho_values[i]),lropt.Ellipsoidal(p=3, rho=rho_values[i]))
+        w_opt, b_opt = solve_svm(cvxro.Ellipsoidal(p=2, rho=rho_values[i]),cvxro.Ellipsoidal(p=3, rho=rho_values[i]))
         df = pd.DataFrame({
             'Feature 1': np.vstack([DATA_1, DATA_2])[:, 0],
             'Feature 2': np.vstack([DATA_1, DATA_2])[:, 1],

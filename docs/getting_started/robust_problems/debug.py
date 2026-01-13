@@ -1,6 +1,6 @@
 import numpy as np
 import cvxpy as cp
-import lropt
+import cvxro
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -20,7 +20,7 @@ K = np.random.rand(F)
 d = np.random.rand(F, N)
 D_value = np.random.rand(N* T)  # Deterministic demand
 
-D = lropt.UncertainParameter(N*T, uncertainty_set = lropt.Ellipsoidal(b = D_value, rho = RHO))
+D = cvxro.UncertainParameter(N*T, uncertainty_set = cvxro.Ellipsoidal(b = D_value, rho = RHO))
 
 x = cp.Variable((F*T,N), nonneg = True)
 P = cp.Variable((F, T), nonneg=True)
@@ -50,7 +50,7 @@ for t in range(T):
     constraints.append(P_T[t]<=Z)
 
 objective = cp.Maximize(theta)
-prob = lropt.RobustProblem(objective, constraints)
+prob = cvxro.RobustProblem(objective, constraints)
 prob.solve()
 
 print(f"The robust optimal value using  is {round(float(theta.value), NUM_DEC)}")

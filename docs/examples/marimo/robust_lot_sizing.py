@@ -66,9 +66,9 @@ def _(mo):
 @app.cell
 def _():
     import numpy as np
-    import lropt
+    import cvxro
     import cvxpy as cp
-    return cp, lropt, np
+    return cp, cvxro, np
 
 
 @app.cell(hide_code=True)
@@ -111,8 +111,8 @@ def _(mo):
 
 
 @app.cell
-def _(RHO, T, lropt):
-    p = lropt.UncertainParameter(T, uncertainty_set = lropt.Budget(rho1 = RHO, rho2= RHO), nonneg = True)
+def _(RHO, T, cvxro):
+    p = cvxro.UncertainParameter(T, uncertainty_set = cvxro.Budget(rho1 = RHO, rho2= RHO), nonneg = True)
     return (p,)
 
 
@@ -144,8 +144,8 @@ def _(mo):
 
 
 @app.cell
-def _(constraints, lropt, objective):
-    prob = lropt.RobustProblem(objective, constraints)
+def _(constraints, cvxro, objective):
+    prob = cvxro.RobustProblem(objective, constraints)
     prob.solve()
     return
 

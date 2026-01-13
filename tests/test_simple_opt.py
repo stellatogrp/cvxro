@@ -3,9 +3,9 @@ import unittest
 import cvxpy as cp
 import numpy as np
 
-from lropt.robust_problem import RobustProblem
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.box import Box
+from cvxro.robust_problem import RobustProblem
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.box import Box
 
 
 class TestSimpleOpt(unittest.TestCase):

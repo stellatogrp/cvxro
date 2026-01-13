@@ -1,5 +1,5 @@
 Ellipsoidal Uncertainty
 ========================
 
-.. autoclass:: lropt.Ellipsoidal
+.. autoclass:: cvxro.Ellipsoidal
    :members:

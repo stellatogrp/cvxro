@@ -146,7 +146,7 @@ docs/examples/misc/
 docs/**/*.gif
 
 # SCM version
-lropt/_version.py
+cvxro/_version.py
 
 
 .csv

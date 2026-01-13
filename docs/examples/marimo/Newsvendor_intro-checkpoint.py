@@ -21,7 +21,7 @@ def _():
     import torch
     from sklearn import datasets
     import pandas as pd
-    import lropt
+    import cvxro
     import sys
     sys.path.append('..')
     from utils import plot_tradeoff,plot_iters, plot_contours, plot_contours_line
@@ -37,7 +37,7 @@ def _():
     })
     return (
         cp,
-        lropt,
+        cvxro,
         np,
         plot_contours_line,
         plot_iters,
@@ -151,7 +151,7 @@ def _(
     cp,
     data,
     loss,
-    lropt,
+    cvxro,
     n,
     np,
     num_scenarios,
@@ -160,7 +160,7 @@ def _(
     test_perc,
     train_test_split,
 ):
-    _u = lropt.UncertainParameter(n, uncertainty_set=lropt.Ellipsoidal(p=2, data=data, loss=loss))
+    _u = cvxro.UncertainParameter(n, uncertainty_set=cvxro.Ellipsoidal(p=2, data=data, loss=loss))
     _x_r = cp.Variable(n)
     _t = cp.Variable()
     k_1 = cp.Parameter(2)
@@ -170,7 +170,7 @@ def _(
     _objective = cp.Minimize(_t)
     _constraints = [cp.maximum(k_1 @ _x_r - p_1 @ _x_r, k_1 @ _x_r - p_1 @ _u) <= _t]
     _constraints = _constraints + [_x_r >= 0]
-    _prob = lropt.RobustProblem(_objective, _constraints)
+    _prob = cvxro.RobustProblem(_objective, _constraints)
     target = -0.05
     s = 15
     train, test = train_test_split(data, test_size=int(data.shape[0] * test_perc), random_state=s)
@@ -270,7 +270,7 @@ def _(
     inds,
     init,
     init_bval,
-    lropt,
+    cvxro,
     np,
     num_scenarios,
     result3,
@@ -289,7 +289,7 @@ def _(
         t_base[_ind] = {}
         for _scene in range(num_scenarios):
             n_1 = 2
-            _u = lropt.UncertainParameter(n_1, uncertainty_set=lropt.Ellipsoidal(p=2, A=1 / eps_list[inds[_ind]] * result3.A, b=1 / eps_list[inds[_ind]] * result3.b))
+            _u = cvxro.UncertainParameter(n_1, uncertainty_set=cvxro.Ellipsoidal(p=2, A=1 / eps_list[inds[_ind]] * result3.A, b=1 / eps_list[inds[_ind]] * result3.b))
             _x_r = cp.Variable(n_1)
             _t = cp.Variable()
             k_2 = scenarios[_scene][0]
@@ -297,12 +297,12 @@ def _(
             _objective = cp.Minimize(_t)
             _constraints = [cp.maximum(k_2 @ _x_r - p_2 @ _x_r, k_2 @ _x_r - p_2 @ _u) <= _t]
             _constraints = _constraints + [_x_r >= 0]
-            _prob = lropt.RobustProblem(_objective, _constraints)
+            _prob = cvxro.RobustProblem(_objective, _constraints)
             _prob.solve()
             x_opt_base[_ind][_scene] = _x_r.value
             t_base[_ind][_scene] = _t.value
             n_1 = 2
-            _u = lropt.UncertainParameter(n_1, uncertainty_set=lropt.Ellipsoidal(p=2, A=1 / eps_list[inds[_ind]] * A_fin, b=1 / eps_list[inds[_ind]] * b_fin))
+            _u = cvxro.UncertainParameter(n_1, uncertainty_set=cvxro.Ellipsoidal(p=2, A=1 / eps_list[inds[_ind]] * A_fin, b=1 / eps_list[inds[_ind]] * b_fin))
             _x_r = cp.Variable(n_1)
             _t = cp.Variable()
             k_2 = scenarios[_scene][0]
@@ -310,7 +310,7 @@ def _(
             _objective = cp.Minimize(_t)
             _constraints = [cp.maximum(k_2 @ _x_r - p_2 @ _x_r, k_2 @ _x_r - p_2 @ _u) <= _t]
             _constraints = _constraints + [_x_r >= 0]
-            _prob = lropt.RobustProblem(_objective, _constraints)
+            _prob = cvxro.RobustProblem(_objective, _constraints)
             _prob.solve()
             x_opt_learned[_ind][_scene] = _x_r.value
             t_learned[_ind][_scene] = _t.value

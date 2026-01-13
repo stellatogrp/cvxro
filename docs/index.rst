@@ -1,7 +1,7 @@
-Welcome to LROPT's documentation!
+Welcome to CVXRO's documentation!
 ==================================
 
-Learning for robust optimization (LROPT) is a package to model and solve optimization Robust Optimization (RO) problems of the form
+Learning for robust optimization (CVXRO) is a package to model and solve optimization Robust Optimization (RO) problems of the form
 
 .. math::
   \begin{array}{ll}
@@ -9,11 +9,11 @@ Learning for robust optimization (LROPT) is a package to model and solve optimiz
     \mbox{subject to} & g(x, u) \le 0,\quad \forall u \in \mathcal{U(\theta)}
   \end{array}
 
-where :math:`u` denotes the uncertain parameter and :math:`\mathcal{U(\theta)}` denotes the uncertainty set for the problem. Rather than forcing you to perform the often intensive math required to reduce this problem to a convex problem, LROPT lets you express RO problems naturally. There are two main ways
-to use LROPT:
+where :math:`u` denotes the uncertain parameter and :math:`\mathcal{U(\theta)}` denotes the uncertainty set for the problem. Rather than forcing you to perform the often intensive math required to reduce this problem to a convex problem, CVXRO lets you express RO problems naturally. There are two main ways
+to use CVXRO:
 
 #. By explicitly defining an uncertainty set :math:`\mathcal{U}` and its parameterization :math:`\theta`
-#. By passing a dataset :math:`U^N` of past realizations of :math:`u` and letting LROPT learn :math:`\theta`
+#. By passing a dataset :math:`U^N` of past realizations of :math:`u` and letting CVXRO learn :math:`\theta`
 
 Simple Examples
 ^^^^^^^^^^^^^^^
@@ -29,13 +29,13 @@ Lets see an example of the first case. Suppose we want to solve the following op
     \mbox{subject to} & (Pu+a)^Tx \le d,\quad \forall u \in \mathcal{U_\text{ellip}(A,b)}
   \end{array}
 
-where :math:`\mathcal{U_\text{ellip}(A,b)} = \{u \mid \| Au + b \|_2 \leq 1 \}`. We would use LROPT to write the following:
+where :math:`\mathcal{U_\text{ellip}(A,b)} = \{u \mid \| Au + b \|_2 \leq 1 \}`. We would use CVXRO to write the following:
 
 .. code:: python
 
   import cvxpy as cp
   import numpy as np
-  import lropt
+  import cvxro
 
   n = 4
   np.random.seed(0)
@@ -45,7 +45,7 @@ where :math:`\mathcal{U_\text{ellip}(A,b)} = \{u \mid \| Au + b \|_2 \leq 1 \}`.
   a = np.random.rand(n)
   c = np.random.rand(n)
   d = 10
-  # Formulate robust constraints with lropt
+  # Formulate robust constraints with cvxro
   unc_set = Ellipsoidal(A = A_unc, b = b_unc)
   a = UncertainParameter(n,
                           uncertainty_set=unc_set)
@@ -59,7 +59,7 @@ Learned Uncertainty Set
 """""""""""""""""""""""
 
 One of the most difficult modeling problems in RO is determining what :math:`\mathcal{U}(\theta)` should be.
-Let's now use LROPT to solve the same problem, but this time passing in a dataset :math:`U^N` and letting LROPT learn :math:`\theta`.
+Let's now use CVXRO to solve the same problem, but this time passing in a dataset :math:`U^N` and letting CVXRO learn :math:`\theta`.
 Under the hood, training is done using pytorch, so users must additionally pass in representations of the objective and constraints with
 uncertainty (we are working to remove the need for this feature). Because Ellipsoidal uncertainty sets have a continuous boundary, they are best for learning. For more details on how this learning is done, see our associated paper.
 
@@ -68,7 +68,7 @@ uncertainty (we are working to remove the need for this feature). Because Ellips
   import torch
   import cvxpy as cp
   import numpy as np
-  import lropt
+  import cvxro
 
   n = 4
   N = 100
@@ -79,7 +79,7 @@ uncertainty (we are working to remove the need for this feature). Because Ellips
   P = np.random.rand(n,n)
   a = np.random.rand(n)
   c = np.random.rand(n)
-  # Formulate robust constraints with lropt
+  # Formulate robust constraints with cvxro
   a = UncertainParameter(n,
                           uncertainty_set=Ellipsoidal(data = u_data))
   constraints = [(P @ u + a).T @ x <= d]
@@ -100,7 +100,7 @@ uncertainty (we are working to remove the need for this feature). Because Ellips
 
 Families of problems
 ^^^^^^^^^^^^^^^^^^^^^
-LROPT can also build uncertainty sets which generalize to a family of optimization problems, parameterized by some :math:`y`, where optimal solutions
+CVXRO can also build uncertainty sets which generalize to a family of optimization problems, parameterized by some :math:`y`, where optimal solutions
 are now functions both of :math:`\theta` and :math:`y`
 
 .. math::
@@ -113,7 +113,7 @@ are now functions both of :math:`\theta` and :math:`y`
     \end{array}
   \end{equation}
 
-In these instances, the user passes a dataset of :math:`Y^J` of :math:`y`'s we can use LROPT to learn a :math:`\theta` which generalizes well for the entire family of optimization problems. To write it up, we can consider the following example.
+In these instances, the user passes a dataset of :math:`Y^J` of :math:`y`'s we can use CVXRO to learn a :math:`\theta` which generalizes well for the entire family of optimization problems. To write it up, we can consider the following example.
 
 .. math::
   \begin{array}{ll}
@@ -129,7 +129,7 @@ This would be written as
   import torch
   import cvxpy as cp
   import numpy as np
-  import lropt
+  import cvxro
 
   n = 4
   N = 100

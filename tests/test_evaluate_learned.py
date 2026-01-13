@@ -5,12 +5,12 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 
-from lropt import Trainer, TrainerSettings
-from lropt.robust_problem import RobustProblem
-from lropt.train.parameter import ContextParameter
-from lropt.train.predictors.linear import LinearPredictor
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro import Trainer, TrainerSettings
+from cvxro.robust_problem import RobustProblem
+from cvxro.train.parameter import ContextParameter
+from cvxro.train.predictors.linear import LinearPredictor
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
 
 ATOL = 1e-5
 RTOL = 1e-5

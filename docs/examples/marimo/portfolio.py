@@ -34,12 +34,12 @@ def _(mo):
 
 @app.cell
 def _():
-    import lropt
+    import cvxro
     import cvxpy as cp
     import numpy as np
     import matplotlib.pyplot as plt
     import pandas as pd
-    return cp, lropt, np, pd, plt
+    return cp, cvxro, np, pd, plt
 
 
 @app.cell
@@ -82,20 +82,20 @@ def _(mo):
 
 
 @app.cell
-def _(cp, lropt, mu, n, np, pd, sigma):
+def _(cp, cvxro, mu, n, np, pd, sigma):
     names = ['Ellipsoidal', 'Budget']
     rho_values = np.linspace(0.1, 2.0, 10)  # Range of rho values
-    uncertainty_sets = {'ellipsoidal': lambda rho: lropt.Ellipsoidal(rho=rho, b=mu, a=np.diag(sigma)), 'budget': lambda rho: lropt.Budget(rho1=rho, rho2=rho, b=mu, a=np.diag(sigma))}
+    uncertainty_sets = {'ellipsoidal': lambda rho: cvxro.Ellipsoidal(rho=rho, b=mu, a=np.diag(sigma)), 'budget': lambda rho: cvxro.Budget(rho1=rho, rho2=rho, b=mu, a=np.diag(sigma))}
     results = {}
     for uc_name, _uc in uncertainty_sets.items():
         results_uc = []
         for rho in rho_values:
             t = cp.Variable()
             x = cp.Variable(n)
-            r = lropt.UncertainParameter(n, uncertainty_set=_uc(rho))
+            r = cvxro.UncertainParameter(n, uncertainty_set=_uc(rho))
             constraints = [r @ x >= t, cp.sum(x) == 1, x >= 0]
             objective = cp.Maximize(t)
-            prob = lropt.RobustProblem(objective, constraints)
+            prob = cvxro.RobustProblem(objective, constraints)
             prob.solve()
             optimal_allocation = x.value
             optimal_return = t.value

@@ -73,10 +73,10 @@ def _(mo):
 def _():
     import numpy as np
     import cvxpy as cp
-    import lropt
+    import cvxro
     import networkx as nx
     import matplotlib.pyplot as plt
-    return cp, lropt, np, nx, plt
+    return cp, cvxro, np, nx, plt
 
 
 @app.cell(hide_code=True)
@@ -88,7 +88,7 @@ def _(mo):
 
 
 @app.cell
-def _(cp, lropt, np):
+def _(cp, cvxro, np):
     np.random.seed(1)
     T = 10
     F = 5
@@ -104,7 +104,7 @@ def _(cp, lropt, np):
     x = {}
     for _i in range(F):
         x[_i] = cp.Variable((N, T))
-    d_u = lropt.UncertainParameter(N * T, uncertainty_set=lropt.Ellipsoidal(b=_d_star, rho=_RHO))
+    d_u = cvxro.UncertainParameter(N * T, uncertainty_set=cvxro.Ellipsoidal(b=_d_star, rho=_RHO))
     p = cp.Variable((F, T))
     z = cp.Variable(F)
     y = cp.Variable(F, boolean=True)
@@ -166,9 +166,9 @@ def _(mo):
 
 
 @app.cell
-def _(constraints, cp, lropt, theta):
+def _(constraints, cp, cvxro, theta):
     _objective = cp.Maximize(theta)
-    _prob = lropt.RobustProblem(_objective, constraints)
+    _prob = cvxro.RobustProblem(_objective, constraints)
     _prob.solve(solver=cp.SCIP)
     return
 
@@ -188,7 +188,7 @@ def _(mo):
 
 
 @app.cell
-def _(cp, lropt, np):
+def _(cp, cvxro, np):
     np.random.seed(1)
     T_1 = 10
     F_1 = 5
@@ -201,7 +201,7 @@ def _(cp, lropt, np):
     c_open_1 = np.random.rand(F_1)
     c_ship_1 = np.random.rand(F_1, N_1)
     _d_star = np.random.rand(N_1 * T_1)
-    d_u_1 = lropt.UncertainParameter(N_1 * T_1, uncertainty_set=lropt.Ellipsoidal(b=_d_star, rho=_RHO))
+    d_u_1 = cvxro.UncertainParameter(N_1 * T_1, uncertainty_set=cvxro.Ellipsoidal(b=_d_star, rho=_RHO))
     p_1 = cp.Variable((F_1, T_1))
     z_1 = cp.Variable(F_1)
     y_1 = cp.Variable(F_1, boolean=True)
@@ -224,7 +224,7 @@ def _(cp, lropt, np):
         constraints_1.append(p_1.T[_t] <= z_1)
     constraints_1 = constraints_1 + [p_1 >= 0]
     _objective = cp.Maximize(theta_1)
-    _prob = lropt.RobustProblem(_objective, constraints_1)
+    _prob = cvxro.RobustProblem(_objective, constraints_1)
     _prob.solve(solver=cp.SCIP)
     return F_1, N_1, T_1, theta_1
 

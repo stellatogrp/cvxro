@@ -17,9 +17,9 @@ from numpy import ndarray
 from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse._coo import coo_matrix
 
-from lropt.robust_problem import RobustProblem
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro.robust_problem import RobustProblem
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
 
 # from tests.settings import SOLVER, SOLVER_SETTINGS
 # from tests.settings import TESTS_ATOL as ATOL
@@ -243,7 +243,7 @@ class TestEllipsoidalUncertainty(unittest.TestCase):
         prob_cvxpy = cp.Problem(objective, constraints)
         prob_cvxpy.solve(solver=SOLVER, **SOLVER_SETTINGS)
         x_cvxpy = x.value
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         a = UncertainParameter(n, uncertainty_set=Ellipsoidal(rho=rho, p=p))
         constraints = [a @ x <= b]
         prob_robust = RobustProblem(objective, constraints)
@@ -259,7 +259,7 @@ class TestEllipsoidalUncertainty(unittest.TestCase):
         prob_cvxpy = cp.Problem(objective, constraints)
         prob_cvxpy.solve(solver=SOLVER, **SOLVER_SETTINGS)
         x_cvxpy = x.value
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         a = UncertainParameter(n, uncertainty_set=Ellipsoidal(rho=rho, p=p))
         constraints = [a @ x <= b]
         prob_robust = RobustProblem(objective, constraints)
@@ -285,7 +285,7 @@ class TestEllipsoidalUncertainty(unittest.TestCase):
         prob_cvxpy = cp.Problem(objective, constraints)
         prob_cvxpy.solve(solver=SOLVER, **SOLVER_SETTINGS)
         x_cvxpy = x.value
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         unc_set = Ellipsoidal(rho=rho)
         a = UncertainParameter(n, uncertainty_set=unc_set)
         constraints = [1 * -(A_unc @ a + b_unc) @ x * 1 <= b]
@@ -300,7 +300,7 @@ class TestEllipsoidalUncertainty(unittest.TestCase):
         # Robust set
         A_unc = 3.0 * np.eye(n)
         b_unc = 0.1 * np.random.rand(n)
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         unc_set = Ellipsoidal(rho=rho)
         a = UncertainParameter(n, uncertainty_set=unc_set)
         constraints = [2 * (A_unc @ a + b_unc) @ x * 1 <= b]

@@ -41,10 +41,10 @@ def _(mo):
 def _():
     import cvxpy as cp
     import numpy as np
-    import lropt
+    import cvxro
 
     np.random.seed(seed=1234)
-    return cp, lropt, np
+    return cp, cvxro, np
 
 
 @app.cell(hide_code=True)
@@ -76,15 +76,15 @@ def _(mo):
 
 
 @app.cell
-def _(b, c, cp, delta, lropt, n, np, w_e):
-    uncertainty_set = lropt.Box(rho=1, a=np.diag(delta), b=w_e)
-    w = lropt.UncertainParameter(n, uncertainty_set=uncertainty_set) #Uncertain parameter
+def _(b, c, cp, delta, cvxro, n, np, w_e):
+    uncertainty_set = cvxro.Box(rho=1, a=np.diag(delta), b=w_e)
+    w = cvxro.UncertainParameter(n, uncertainty_set=uncertainty_set) #Uncertain parameter
     x = cp.Variable(n, boolean=True) #Optimization variable
 
     #Define and solve the problem
     objective = cp.Maximize(c@x)
     constraints = [w@x <= b]
-    prob = lropt.RobustProblem(objective=objective, constraints=constraints)
+    prob = cvxro.RobustProblem(objective=objective, constraints=constraints)
     prob.solve(solver = cp.SCIP)
     return
 
