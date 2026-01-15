@@ -2,16 +2,16 @@ import unittest
 
 import numpy as np
 
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.box import Box
-from lropt.uncertainty_sets.budget import Budget
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.box import Box
+from cvxro.uncertainty_sets.budget import Budget
 
-# from lropt.robust_problem import RobustProblem
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
-from lropt.uncertainty_sets.mro import MRO
-from lropt.uncertainty_sets.norm import Norm
-from lropt.uncertainty_sets.polyhedral import Polyhedral
-from lropt.uncertainty_sets.uncertainty_set import SUPPORT_TYPE
+# from cvxro.robust_problem import RobustProblem
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro.uncertainty_sets.mro import MRO
+from cvxro.uncertainty_sets.norm import Norm
+from cvxro.uncertainty_sets.polyhedral import Polyhedral
+from cvxro.uncertainty_sets.uncertainty_set import SUPPORT_TYPE
 
 
 class TestSupport(unittest.TestCase):

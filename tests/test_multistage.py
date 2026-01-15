@@ -5,8 +5,8 @@ import numpy as np
 import scipy as sc
 import torch
 
-import lropt
-from lropt import TrainerSettings
+import cvxro
+from cvxro import TrainerSettings
 
 
 class TestMultiStage(unittest.TestCase):
@@ -101,9 +101,9 @@ class TestMultiStage(unittest.TestCase):
             ax.grid(True)
 
         def baseline_problem(x_init, cval, pval, hval):
-            d = lropt.UncertainParameter(
+            d = cvxro.UncertainParameter(
                 T,
-                uncertainty_set=lropt.Ellipsoidal(p=2, rho=init_eps, c=lhs, d=rhs, a=cov, b=d_star),
+                uncertainty_set=cvxro.Ellipsoidal(p=2, rho=init_eps, c=lhs, d=rhs, a=cov, b=d_star),
             )
             # d = d_star
             q = cp.Variable(T)
@@ -133,7 +133,7 @@ class TestMultiStage(unittest.TestCase):
             constraints += [u >= alpha2 * (w - q)]
             constraints += [z >= beta1 * (w[1:] - w[:-1])]
             constraints += [z >= beta2 * (w[:-1] - w[1:])]
-            prob = lropt.RobustProblem(cp.Minimize(objective), constraints)
+            prob = cvxro.RobustProblem(cp.Minimize(objective), constraints)
             prob.solve()
             return prob.objective.value, w.value, q.value, y.value, u.value, z.value
 
@@ -169,9 +169,9 @@ class TestMultiStage(unittest.TestCase):
         # (random_values1[1:]))))
 
         def baseline_problem_aro(init_val, cval, pval, hval):
-            d = lropt.UncertainParameter(
+            d = cvxro.UncertainParameter(
                 T,
-                uncertainty_set=lropt.Ellipsoidal(p=2, rho=init_eps, c=lhs, d=rhs, a=cov, b=d_star),
+                uncertainty_set=cvxro.Ellipsoidal(p=2, rho=init_eps, c=lhs, d=rhs, a=cov, b=d_star),
             )
             # d = d_star
             q = cp.Variable(T)
@@ -223,7 +223,7 @@ class TestMultiStage(unittest.TestCase):
             constraints += [u + u_var @ d >= alpha2 * (w - q - q_var @ d)]
             constraints += [z >= beta1 * (w[1:] - w[:-1])]
             constraints += [z >= beta2 * (w[:-1] - w[1:])]
-            prob = lropt.RobustProblem(cp.Minimize(objective), constraints)
+            prob = cvxro.RobustProblem(cp.Minimize(objective), constraints)
             return prob, x_init, w, q, q_var, y, y_var, u, u_var, z
 
         baseline_prob, x_init, w_baseline, q, q_var, y, y_var, u, u_var, z = baseline_problem_aro(
@@ -274,18 +274,18 @@ class TestMultiStage(unittest.TestCase):
         # q_var@random_traj) + sum(np.maximum(h[:T]*np.array(random_values
         # [1:]), -p[:T]*np.array(random_values[1:])))).value  )
 
-        d = lropt.UncertainParameter(
+        d = cvxro.UncertainParameter(
             K,
-            uncertainty_set=lropt.Ellipsoidal(
+            uncertainty_set=cvxro.Ellipsoidal(
                 p=2, rho=1, c=lhs_new, d=rhs_new, data=np.zeros((2, K))
             ),
         )
-        # d = lropt.UncertainParameter(K,uncertainty_set =
-        # lropt.Ellipsoidal(p=2,rho=1,c = lhs, d = rhs, data = np.zeros((1,K))))
-        # d = lropt.UncertainParameter(K,uncertainty_set = lropt.Ellipsoidal
+        # d = cvxro.UncertainParameter(K,uncertainty_set =
+        # cvxro.Ellipsoidal(p=2,rho=1,c = lhs, d = rhs, data = np.zeros((1,K))))
+        # d = cvxro.UncertainParameter(K,uncertainty_set = cvxro.Ellipsoidal
         # (p=2,rho=1,c = -np.eye(K), d = np.zeros(K), a = cov[:K,:K],
         #  b = d_star[:K]))
-        # d = lropt.UncertainParameter(T,uncertainty_set = lropt.Ellipsoidal
+        # d = cvxro.UncertainParameter(T,uncertainty_set = cvxro.Ellipsoidal
         # (p=2,rho=init_eps,c = lhs, d = rhs, a = cov, b = d_star))
 
         x_endind = T + 1 + K
@@ -401,11 +401,11 @@ class TestMultiStage(unittest.TestCase):
         constraints += [u >= alpha1 * (q - w), u >= alpha2 * (w - q)]
         constraints += [e_ind == e_indvar, h_ind == h_indvar, p_ind == p_indvar]
 
-        prob = lropt.RobustProblem(cp.Minimize(objective), constraints)
-        trainer = lropt.Trainer(prob)
+        prob = cvxro.RobustProblem(cp.Minimize(objective), constraints)
+        trainer = cvxro.Trainer(prob)
         policy = trainer.create_cvxpylayer(parameters=all_params, variables=[uall])
 
-        class InvSimulator(lropt.Simulator):
+        class InvSimulator(cvxro.Simulator):
             def simulate(self, x, u, **kwargs):
                 u = u[0]
                 x_hat, d_star_val, q_hat, d_hat, y_hat, u_hat, _, _, _, tval, _, _, _, _, _ = x

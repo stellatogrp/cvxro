@@ -4,11 +4,11 @@ import cvxpy as cp
 import numpy as np
 import numpy.testing as npt
 
-import lropt
-from lropt.robust_problem import RobustProblem
-from lropt.train.parameter import ContextParameter
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
+import cvxro
+from cvxro.robust_problem import RobustProblem
+from cvxro.train.parameter import ContextParameter
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
 
 TOLERANCE_DEFAULT = 1e-5
 ATOL = 1e-4
@@ -38,7 +38,7 @@ class TestEvaluateSolution(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
         constraints = [a @ x <= b, cp.sum(x)==1]
@@ -63,7 +63,7 @@ class TestEvaluateSolution(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
         constraints = [a @ x <= b, cp.sum(x)==1]
@@ -93,7 +93,7 @@ class TestEvaluateSolution(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
         a1 = UncertainParameter(n,
@@ -126,7 +126,7 @@ class TestEvaluateSolution(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
         constraints = [a @ x <= b, cp.sum(x)==1]
@@ -172,7 +172,7 @@ class TestSolutionProbability(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
         t = cp.Variable()
@@ -202,7 +202,7 @@ class TestSolutionProbability(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         t = cp.Variable()
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
@@ -248,7 +248,7 @@ class TestSolutionProbability(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         t = cp.Variable()
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
@@ -507,7 +507,7 @@ class TestProbability(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         t = cp.Variable()
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
@@ -623,7 +623,7 @@ class TestProbability_uncertain_obj(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         # t = cp.Variable()
         a = UncertainParameter(n,
                                uncertainty_set=Ellipsoidal(rho=rho, p=p))
@@ -674,7 +674,7 @@ class TestProbability_uncertain_obj(unittest.TestCase):
         b, x, n, rho, p = \
             self.b, self.x, self.n, self.rho, self.p
         # Formulate robust problem explicitly with cvxpy
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         np.random.seed(0)
         self.d = np.random.rand(n)
         self.cc = self.d + np.random.uniform(2, 5, n)
@@ -685,7 +685,7 @@ class TestProbability_uncertain_obj(unittest.TestCase):
                                uncertainty_set=Ellipsoidal(rho=2*rho, p=p))
         constraints = [a @ x <= b, cp.sum(x)==1,
                        a1@x -self.context_param <=b,
-                       lropt.max_of_uncertain([ - self.d@x,- self.d@(3*a+3)],
+                       cvxro.max_of_uncertain([ - self.d@x,- self.d@(3*a+3)],
                                               \
                                          self.cc@x) <= 1]
         objective = cp.Minimize(-a @ self.x + a1@self.x + self.param_val

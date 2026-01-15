@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import numpy.testing as npt
 
-import lropt
+import cvxro
 
 ATOL = 1e-4
 RTOL = 1e-4
@@ -78,21 +78,21 @@ class TestScenario(unittest.TestCase):
 
 
         # Using the scenario sets. Both u and p are treated as uncertain params
-        u = lropt.UncertainParameter(n,
-                                uncertainty_set=lropt.Scenario(
+        u = cvxro.UncertainParameter(n,
+                                uncertainty_set=cvxro.Scenario(
                                                             data=train))
         x_r = cp.Variable(n)
         t = cp.Variable()
         # Cartesian set to false, since we do not want to permutate the
         # realizations
-        k = lropt.UncertainParameter(n,
-                                uncertainty_set=lropt.Scenario(
+        k = cvxro.UncertainParameter(n,
+                                uncertainty_set=cvxro.Scenario(
                                                             data=k_train, cartesian = False))
         p = cp.Parameter(n)
         p_x = cp.Variable(n)
         objective = cp.Minimize(t)
         p.value = p_train[0]
-        constraints = [lropt.max_of_uncertain([-p[0]*x_r[0] - p[1]*x_r[1],
+        constraints = [cvxro.max_of_uncertain([-p[0]*x_r[0] - p[1]*x_r[1],
                                                -p[0]*x_r[0] - p_x[1]*u[1],
                                                -p_x[0]*u[0] - p[1]*x_r[1],
                                                  -p_x[0]*u[0]- p_x[1]*u[1]])
@@ -104,7 +104,7 @@ class TestScenario(unittest.TestCase):
                                       -p[0]*x_r[0] - p[1]*u[1], -p[0]*u[0]
                                         - p[1]*x_r[1], -p[0]*u[0]- p[1]*u[1])
 
-        prob_rob = lropt.RobustProblem(objective, constraints,eval_exp = eval_exp)
+        prob_rob = cvxro.RobustProblem(objective, constraints,eval_exp = eval_exp)
         prob_rob.solve()
 
         eval, prob_vio = calc_eval(x_r.value, p_test, k_test,test,t.value)

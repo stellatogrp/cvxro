@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.18.4"
+__generated_with = "0.19.2"
 app = marimo.App()
 
 
@@ -56,9 +56,9 @@ def _(mo):
 def _():
     import numpy as np
     import cvxpy as cp
-    import lropt
+    import cvxro
     import matplotlib.pyplot as plt
-    return cp, lropt, np, plt
+    return cp, cvxro, np, plt
 
 
 @app.cell(hide_code=True)
@@ -109,7 +109,7 @@ def _(mo):
 
 
 @app.cell
-def _(T, alphas, lropt, np):
+def _(T, alphas, cvxro, np):
     def setup_parameters(proportion):
         # Check if you can use t_values here as well instead of the list comprehension
         t_values = np.arange(1, T + 1)
@@ -124,7 +124,7 @@ def _(T, alphas, lropt, np):
         rhs_lower = (-1 + proportion) * d_star
         rhs = np.hstack((rhs_upper, rhs_lower))
 
-        d = lropt.UncertainParameter(T, uncertainty_set=lropt.Polyhedral(lhs=lhs, rhs=rhs))
+        d = cvxro.UncertainParameter(T, uncertainty_set=cvxro.Polyhedral(lhs=lhs, rhs=rhs))
 
         return c, d, rhs_upper, rhs_lower, d_star
     return (setup_parameters,)
@@ -147,7 +147,7 @@ def _(mo):
 
 
 @app.cell
-def _(I, T, c, cp, lropt, p_max, q_max, v_init, v_max, v_min):
+def _(I, T, c, cp, cvxro, p_max, q_max, v_init, v_max, v_min):
     def solve_problem(d):
         p = cp.Variable((I, T), nonneg=True)
         constraints = [
@@ -161,7 +161,7 @@ def _(I, T, c, cp, lropt, p_max, q_max, v_init, v_max, v_min):
             constraints.append(cp.sum(cp.sum(cp.sum(p, axis=0)[:i])) - cp.sum(d[:i]) + v_init <= v_max)
 
         objective = cp.Minimize(cp.sum(cp.multiply(c, p)))
-        prob = lropt.RobustProblem(objective, constraints)
+        prob = cvxro.RobustProblem(objective, constraints)
         prob.solve()
         return prob.objective.value, p.value
     return (solve_problem,)

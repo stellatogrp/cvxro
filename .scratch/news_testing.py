@@ -14,7 +14,7 @@ from utils import (
     plot_iters,
 )
 
-import lropt
+import cvxro
 
 warnings.filterwarnings("ignore")
 
@@ -57,18 +57,18 @@ test = np.array([init_data[j][i] for i in test_indices for j in range(num_contex
 mults_mean_weight, mults_mean_bias = gen_weights_bias(k_data, p_data, data, N)
 
 
-# create lropt problem
+# create cvxro problem
 # Formulate uncertainty set
-u = lropt.UncertainParameter(n, uncertainty_set=lropt.Ellipsoidal(data=data))
+u = cvxro.UncertainParameter(n, uncertainty_set=cvxro.Ellipsoidal(data=data))
 # Formulate the Robust Problem
 x_r = cp.Variable(n)
 t = cp.Variable()
-k = lropt.ContextParameter(2, data=k_data)
-p = lropt.ContextParameter(2, data=p_data)
+k = cvxro.ContextParameter(2, data=k_data)
+p = cvxro.ContextParameter(2, data=p_data)
 p_x = cp.Variable(n)
 objective = cp.Minimize(t)
 constraints = [
-    lropt.max_of_uncertain(
+    cvxro.max_of_uncertain(
         [
             -p[0] * x_r[0] - p[1] * x_r[1],
             -p[0] * x_r[0] - p_x[1] * u[1],
@@ -89,9 +89,9 @@ eval_exp = k @ x_r + cp.maximum(
     -p[0] * u[0] - p[1] * u[1],
 )
 
-prob = lropt.RobustProblem(objective, constraints, eval_exp=eval_exp)
+prob = cvxro.RobustProblem(objective, constraints, eval_exp=eval_exp)
 
-# train lropt problem - linear predictor
+# train cvxro problem - linear predictor
 num_iters = 500
 initn = sc.linalg.sqrtm(np.cov(train.T))
 init_bvaln = np.mean(train, axis=0)
@@ -101,8 +101,8 @@ init_bias = np.hstack([initn.flatten(), mults_mean_bias])
 init_weight = np.vstack([np.zeros((4, 4)), mults_mean_weight])
 
 
-trainer = lropt.Trainer(prob)
-trainer_settings = lropt.TrainerSettings()
+trainer = cvxro.Trainer(prob)
+trainer_settings = cvxro.TrainerSettings()
 
 trainer_settings.lr = 0.0001
 trainer_settings.num_iter = num_iters  # number of training iterations
@@ -288,8 +288,8 @@ context_evals = 0
 context_probs = 0
 # solve for each context and average
 for context in range(num_context):
-    u = lropt.UncertainParameter(
-        n, uncertainty_set=lropt.Scenario(data=init_data[context][train_indices])
+    u = cvxro.UncertainParameter(
+        n, uncertainty_set=cvxro.Scenario(data=init_data[context][train_indices])
     )
     x_s = cp.Variable(n)
     t1 = cp.Variable()
@@ -297,7 +297,7 @@ for context in range(num_context):
     p1 = init_p_data[context]
     objective = cp.Minimize(t1)
     constraints = [
-        lropt.max_of_uncertain(
+        cvxro.max_of_uncertain(
             [
                 -p1[0] * x_s[0] - p1[1] * x_s[1],
                 -p1[0] * x_s[0] - p1[1] * u[1],
@@ -310,7 +310,7 @@ for context in range(num_context):
     ]
     constraints += [x_s >= 0]
 
-    prob_sc = lropt.RobustProblem(objective, constraints)
+    prob_sc = cvxro.RobustProblem(objective, constraints)
     prob_sc.solve()
     eval, prob_vio = calc_eval(
         x_s.value,

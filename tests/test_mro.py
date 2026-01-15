@@ -4,7 +4,7 @@ import cvxpy as cp
 import numpy as np
 import numpy.testing as npt
 
-import lropt
+import cvxro
 from tests.settings import TESTS_ATOL as ATOL
 from tests.settings import TESTS_RTOL as RTOL
 
@@ -30,9 +30,9 @@ class TestMROUncertainty(unittest.TestCase):
         # Ellipsoidal uncertainty set example
         m = 5
         data = np.random.normal(0,1,size = (100,m))
-        ellip_u = lropt.UncertainParameter(m,
+        ellip_u = cvxro.UncertainParameter(m,
                                           uncertainty_set = \
-                                            lropt.Ellipsoidal(p= 2, rho=2.,
+                                            cvxro.Ellipsoidal(p= 2, rho=2.,
                                                  b = np.mean(data, axis = 0)))
         n = 4
 
@@ -51,13 +51,13 @@ class TestMROUncertainty(unittest.TestCase):
         constraints = [(P@ellip_u +a)@ x_r <= 10]
 
         # formulate Robust Problem
-        prob_robust = lropt.RobustProblem(objective, constraints)
+        prob_robust = cvxro.RobustProblem(objective, constraints)
         # solve
         prob_robust.solve()
 
         #
-        mro_u = lropt.UncertainParameter(m,
-                                        uncertainty_set = lropt.MRO(rho=2.,
+        mro_u = cvxro.UncertainParameter(m,
+                                        uncertainty_set = cvxro.MRO(rho=2.,
                                                     K = 1, data = data,
                                                     train = False))
         n = 4
@@ -72,7 +72,7 @@ class TestMROUncertainty(unittest.TestCase):
         constraints = [(P@mro_u +a)@ x_m <= 10]
 
         # formulate Robust Problem
-        prob_robust = lropt.RobustProblem(objective, constraints)
+        prob_robust = cvxro.RobustProblem(objective, constraints)
 
         # solve
         prob_robust.solve()

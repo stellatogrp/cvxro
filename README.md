@@ -2,7 +2,7 @@
 Learning for Optimization under Uncertainty
 =====================
 
-LROPT is a package for decision making under uncertainty. It is based on Python, and built on top of [CVXPY](https://www.cvxpy.org). It allows model optimization problems affected by uncertainty using data.
+CVXRO is a package for decision making under uncertainty. It is based on Python, and built on top of [CVXPY](https://www.cvxpy.org). It allows model optimization problems affected by uncertainty using data.
 
 ## Example
 
@@ -11,7 +11,7 @@ The following code solves a linear programming problem where the objective is to
 ```python3
 import cvxpy as cp
 import numpy as np
-import lropt
+import cvxro
 
 # Data
 A = np.array([1, 2])
@@ -25,7 +25,7 @@ c = np.array([1, 1])
 objective = cp.Minimize(c.T @ x)
 
 # Uncertainty parameter
-u = lropt.UncertainParameter(1, uncertainty_set=lropt.Ellipsoidal())
+u = cvxro.UncertainParameter(1, uncertainty_set=cvxro.Ellipsoidal())
 
 # Constraints
 constraints = [
@@ -34,11 +34,11 @@ constraints = [
 ]
 
 # Problem
-prob = lropt.RobustProblem(objective, constraints)
+prob = cvxro.RobustProblem(objective, constraints)
 prob.solve()
 ```
 
-LROPT is not a solver. It relies upon the open source solvers listed [here](https://www.cvxpy.org/tutorial/solvers/index.html#solve-method-options).
+CVXRO is not a solver. It relies upon the open source solvers listed [here](https://www.cvxpy.org/tutorial/solvers/index.html#solve-method-options).
 
 
 ## Contributing
@@ -49,9 +49,9 @@ ours.
 
 ## Team
 
-LROPT is  built from the contributions of many
-researchers and engineers. A list of people who contributed to the development of LROPT include Irina Wang, Amit Solomon, Bartolomeo Stellato, Cole Becker, Bart Van Parys and Manav Jairam.
+CVXRO is  built from the contributions of many
+researchers and engineers. A list of people who contributed to the development of CVXRO include Irina Wang, Amit Solomon, Bartolomeo Stellato, Cole Becker, Bart Van Parys and Manav Jairam.
 
 ## Citing
 
-If you use LROPT for published work, we encourage you to cite this [paper](https://arxiv.org/abs/2305.19225).
+If you use CVXRO for published work, we encourage you to cite this [paper](https://arxiv.org/abs/2305.19225).

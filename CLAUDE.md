@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-LROPT (Learning for Robust Optimization) is a Python package for decision-making under uncertainty, built on CVXPY. It solves robust optimization problems where decision-makers must protect against uncertain parameters: `minimize f(x) subject to g(x,u) ≤ 0 for all u ∈ U(θ)`.
+CVXRO (Learning for Robust Optimization) is a Python package for decision-making under uncertainty, built on CVXPY. It solves robust optimization problems where decision-makers must protect against uncertain parameters: `minimize f(x) subject to g(x,u) ≤ 0 for all u ∈ U(θ)`.
 
-The key differentiator is that users can either define uncertainty sets explicitly OR pass historical data and let LROPT learn the optimal uncertainty set through training.
+The key differentiator is that users can either define uncertainty sets explicitly OR pass historical data and let CVXRO learn the optimal uncertainty set through training.
 
 ## Commands
 
@@ -23,10 +23,10 @@ uv run pytest tests/test_simple_opt.py
 uv run pytest tests/test_simple_opt.py::test_name -v
 
 # Lint check
-uv run ruff check lropt/
+uv run ruff check cvxro/
 
 # Auto-fix lint issues
-uv run ruff check --fix lropt/
+uv run ruff check --fix cvxro/
 
 # Install in development mode
 uv pip install -e ".[dev]"
@@ -60,12 +60,12 @@ Updated uncertainty set parameters
 
 ### Key Modules
 
-- **`lropt/robust_problem.py`**: Main `RobustProblem` class extending CVXPY Problem
-- **`lropt/uncertain_parameter.py`**: `UncertainParameter` class (CVXPY Parameter subclass with uncertainty_set)
-- **`lropt/train/trainer.py`**: `Trainer` class orchestrating uncertainty set learning
-- **`lropt/train/settings.py`**: `TrainerSettings` with training hyperparameters
-- **`lropt/uncertainty_sets/`**: Uncertainty set implementations (Ellipsoidal, Box, Polyhedral, Budget, MRO, Scenario, Norm)
-- **`lropt/uncertain_canon/`**: Canonicalization/reformulation of uncertain constraints
+- **`cvxro/robust_problem.py`**: Main `RobustProblem` class extending CVXPY Problem
+- **`cvxro/uncertain_parameter.py`**: `UncertainParameter` class (CVXPY Parameter subclass with uncertainty_set)
+- **`cvxro/train/trainer.py`**: `Trainer` class orchestrating uncertainty set learning
+- **`cvxro/train/settings.py`**: `TrainerSettings` with training hyperparameters
+- **`cvxro/uncertainty_sets/`**: Uncertainty set implementations (Ellipsoidal, Box, Polyhedral, Budget, MRO, Scenario, Norm)
+- **`cvxro/uncertain_canon/`**: Canonicalization/reformulation of uncertain constraints
 
 ### Public API (from `__init__.py`)
 

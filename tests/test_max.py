@@ -6,11 +6,11 @@ import numpy.random as npr
 import numpy.testing as npt
 from cvxpy.error import DCPError
 
-from lropt.robust_problem import RobustProblem
-from lropt.uncertain_canon.max_of_uncertain import max_of_uncertain, sum_of_max_of_uncertain
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
-from lropt.uncertainty_sets.mro import MRO
+from cvxro.robust_problem import RobustProblem
+from cvxro.uncertain_canon.max_of_uncertain import max_of_uncertain, sum_of_max_of_uncertain
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro.uncertainty_sets.mro import MRO
 
 # from tests.settings import TESTS_ATOL as ATOL
 # from tests.settings import TESTS_RTOL as RTOL

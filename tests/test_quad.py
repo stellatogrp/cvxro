@@ -6,14 +6,14 @@ import numpy.testing as npt
 import scipy as sc
 from sklearn import datasets
 
-from lropt.robust_problem import RobustProblem
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro.robust_problem import RobustProblem
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
 from tests.settings import TESTS_ATOL as ATOL
 from tests.settings import TESTS_RTOL as RTOL
 
 
-#TODO: We used to have lropt.quad_form but we no longer have
+#TODO: We used to have cvxro.quad_form but we no longer have
 class TestQuad(unittest.TestCase):
 
     def setUp(self):
@@ -42,7 +42,7 @@ class TestQuad(unittest.TestCase):
         objective = cp.Minimize(t)
 
         # formulate constraints
-        #TODO: This cp.quad_form used to be lropt.quad_form, it was changed so Linter wouldn't cry
+        #TODO: This cp.quad_form used to be cvxro.quad_form, it was changed so Linter wouldn't cry
         constraints = [cp.sum([-0.5*cp.quad_form(u, P[i]*x_r[i])
                               for i in range(n)]) <= t]
         constraints += [cp.sum(x_r) == 4]

@@ -5,11 +5,11 @@ Getting started
 Installation
 ------------
 
-You can install :code:`lropt` with
+You can install :code:`cvxro` with
 
 .. code:: bash
 
-   pip install lropt
+   pip install cvxro
 
 
 .. toctree::

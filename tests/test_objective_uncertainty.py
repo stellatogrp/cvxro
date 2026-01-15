@@ -7,13 +7,13 @@ import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
 
-from lropt import max_of_uncertain
+from cvxro import max_of_uncertain
 
 # import numpy.random as npr
-from lropt.robust_problem import RobustProblem
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.box import Box
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro.robust_problem import RobustProblem
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.box import Box
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
 
 # from tests.settings import TESTS_ATOL as ATOL
 # from tests.settings import TESTS_RTOL as RTOL
@@ -41,7 +41,7 @@ class TestObjectiveUncertainty(unittest.TestCase):
 
         # SETUP
         n = 5
-        x_lropt = cp.Variable(n)
+        x_cvxro = cp.Variable(n)
         c = npr.rand(n)
         b = 10.
         P = npr.randint(-1, 5, size=(n, n))
@@ -49,7 +49,7 @@ class TestObjectiveUncertainty(unittest.TestCase):
         rho_1 = 0.2
         rho_2 = 0.5
 
-        # Formulate robust constraints with lropt
+        # Formulate robust constraints with cvxro
         unc_set_1 = Ellipsoidal(rho=rho_1)
         unc_set_2 = Box(rho=rho_2)
         u_1 = UncertainParameter(n,
@@ -58,8 +58,8 @@ class TestObjectiveUncertainty(unittest.TestCase):
         u_2 = UncertainParameter(n,
                                  uncertainty_set=unc_set_2)
         constraints_1 = [max_of_uncertain(
-            [u_1 @ P @ x_lropt, a @ x_lropt]) + u_2 @ x_lropt <= b]
-        objective_1 = cp.Minimize(c @ x_lropt + u_1 @ x_lropt)
+            [u_1 @ P @ x_cvxro, a @ x_cvxro]) + u_2 @ x_cvxro <= b]
+        objective_1 = cp.Minimize(c @ x_cvxro + u_1 @ x_cvxro)
 
         prob_robust = RobustProblem(objective_1, constraints_1)
         prob_robust.solve(solver=SOLVER, **SOLVER_SETTINGS)
@@ -75,7 +75,7 @@ class TestObjectiveUncertainty(unittest.TestCase):
         prob_rob2 = RobustProblem(objective_2, constraints_2)
         prob_rob2.solve(solver=SOLVER, **SOLVER_SETTINGS)
 
-        npt.assert_allclose(x_lropt.value, x_rob2.value, rtol=RTOL, atol=ATOL)
+        npt.assert_allclose(x_cvxro.value, x_rob2.value, rtol=RTOL, atol=ATOL)
 
         # Robust problem 4
 
@@ -101,4 +101,4 @@ class TestObjectiveUncertainty(unittest.TestCase):
         constraints_3 += [-b + rho_2*cp.norm(x_cvx,1) + a @ x_cvx <= 0]
         prob_cvx = cp.Problem(objective_3, constraints_3)
         prob_cvx.solve(solver=SOLVER, **SOLVER_SETTINGS)
-        npt.assert_allclose(x_lropt.value, x_cvx.value, rtol=RTOL, atol=ATOL)
+        npt.assert_allclose(x_cvxro.value, x_cvx.value, rtol=RTOL, atol=ATOL)
