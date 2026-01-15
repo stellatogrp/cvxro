@@ -1,5 +1,5 @@
 
-Learning for Optimization under Uncertainty
+Convex Optimization under Uncertainty
 =====================
 
 CVXRO is a package for decision making under uncertainty. It is based on Python, and built on top of [CVXPY](https://www.cvxpy.org). It allows model optimization problems affected by uncertainty using data.
