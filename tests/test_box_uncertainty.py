@@ -4,10 +4,10 @@ import cvxpy as cp
 import numpy as np
 import numpy.testing as npt
 
-from lropt.robust_problem import RobustProblem
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.box import Box
-from lropt.uncertainty_sets.polyhedral import Polyhedral
+from cvxro.robust_problem import RobustProblem
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.box import Box
+from cvxro.uncertainty_sets.polyhedral import Polyhedral
 
 # from tests.settings import SOLVER
 # from tests.settings import TESTS_ATOL as ATOL
@@ -53,7 +53,7 @@ class TestBoxUncertainty(unittest.TestCase):
         prob_cvxpy_box.solve(solver=SOLVER)
         x_cvxpy_box = x.value
 
-        # Formulate robust problem using box constraints in lropt
+        # Formulate robust problem using box constraints in cvxro
         unc_set = Box(rho=0.1)
 
         a = UncertainParameter(n, uncertainty_set=unc_set)
@@ -242,7 +242,7 @@ class TestBoxUncertainty(unittest.TestCase):
         prob_cvxpy_box.solve(solver=SOLVER)
         x_cvxpy_box = x.value
 
-        # Formulate robust problem using box constraints in lropt
+        # Formulate robust problem using box constraints in cvxro
         unc_set = Box(rho=0.1)
 
         a = UncertainParameter(n, uncertainty_set=unc_set)

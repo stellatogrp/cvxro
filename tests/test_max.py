@@ -6,11 +6,11 @@ import numpy.random as npr
 import numpy.testing as npt
 from cvxpy.error import DCPError
 
-from lropt.robust_problem import RobustProblem
-from lropt.uncertain_canon.max_of_uncertain import max_of_uncertain, sum_of_max_of_uncertain
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
-from lropt.uncertainty_sets.mro import MRO
+from cvxro.robust_problem import RobustProblem
+from cvxro.uncertain_canon.max_of_uncertain import max_of_uncertain, sum_of_max_of_uncertain
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro.uncertainty_sets.mro import MRO
 
 # from tests.settings import TESTS_ATOL as ATOL
 # from tests.settings import TESTS_RTOL as RTOL
@@ -80,6 +80,67 @@ class TestMax(unittest.TestCase):
         constraints += [self.a@x_cvxpy - 3*self.d @
                         np.ones(n) + np.mean(self.data, axis=0)@(-3*self.d)
                         + cp.norm(3*self.d, 2) <= t]
+        constraints += [x_cvxpy >= 0]
+
+        # formulate problem
+        prob_cvxpy = cp.Problem(objective, constraints)
+        prob_cvxpy.solve()
+
+        # assert x values are equal
+        npt.assert_allclose(x_r.value, x_cvxpy.value, rtol=RTOL, atol=ATOL)
+
+
+    def test_maximum_of_affine_additional(self):
+        # formulate uncertainty set
+        n = 5
+        u = UncertainParameter(n,
+                               uncertainty_set=Ellipsoidal(p=2, rho=1,
+                                                           b=np.mean(self.data, axis=0)))
+        # formulate cvxpy variables
+        x_r = cp.Variable(n)
+        t = cp.Variable()
+
+        # formulate objective
+        objective = cp.Minimize(t)
+
+        # formulate constraints
+        # constraints = [cp.maximum(
+        #     self.a@x_r - self.d@x_r, self.a@x_r - self.d@(3*u+3)) <= t]
+        #
+        constraints = []
+        constraints += [- self.d@(3*u+3)<= 0]
+        constraints += [max_of_uncertain([ - self.d@x_r,- self.d@(3*u+3)],\
+                                         self.a@x_r-t) <=0]
+        constraints += [max_of_uncertain([ - 2*self.d@x_r,- self.d@(3*u+3)],\
+                                         self.a@x_r-t) <=0]
+        constraints += [-self.d@(3*u+3) + self.a@x_r-t - 3 <= 0]
+        constraints += [x_r >= 0]
+
+        # formulate Robust Problem
+        prob_robust = RobustProblem(objective, constraints)
+
+        # solve
+        prob_robust.solve()
+
+        # formulate using cvxpy
+        x_cvxpy = cp.Variable(n)
+        t = cp.Variable()
+
+        # formulate objective
+        objective = cp.Minimize(t)
+
+        # formulate constraints
+        constraints = [self.a@x_cvxpy - self.d@x_cvxpy <= t]
+        constraints += [self.a@x_cvxpy - 2*self.d@x_cvxpy <= t]
+        constraints += [- 3*self.d @
+                        np.ones(n) + np.mean(self.data, axis=0)@(-3*self.d)
+                        + cp.norm(3*self.d, 2) <= 0]
+        constraints += [self.a@x_cvxpy - 3*self.d @
+                        np.ones(n) + np.mean(self.data, axis=0)@(-3*self.d)
+                        + cp.norm(3*self.d, 2) <= t]
+        constraints += [self.a@x_cvxpy - 3*self.d @
+                        np.ones(n) + np.mean(self.data, axis=0)@(-3*self.d)
+                        + cp.norm(3*self.d, 2) -3 <= t]
         constraints += [x_cvxpy >= 0]
 
         # formulate problem

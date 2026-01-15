@@ -5,7 +5,7 @@ import numpy.random as npr
 import torch
 from sklearn import datasets
 import pandas as pd
-import lropt
+import cvxro
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import warnings
@@ -85,14 +85,14 @@ newdata = data_modes(8001,m,[1,2,3],seed = 10000+seed)
 init_bval = np.mean(train, axis=0)
 
 # formulate the ellipsoidal set
-u = lropt.UncertainParameter(m,
-                                uncertainty_set = lropt.Ellipsoidal(p=2, data =data))
+u = cvxro.UncertainParameter(m,
+                                uncertainty_set = cvxro.Ellipsoidal(p=2, data =data))
 # formulate cvxpy variable
 L = cp.Variable()
 s = cp.Variable(n)
 y = cp.Variable(n)
 Y = cp.Variable((n,m))
-r = lropt.Parameter(n, data = y_data)
+r = cvxro.Parameter(n, data = y_data)
 
 # formulate objective
 objective = cp.Minimize(L)
@@ -107,7 +107,7 @@ constraints += [np.ones(n)@s == C]
 constraints += [s <=c, s >=0]
 eval_exp = -r@y - r@Y@u + (t+h)@s
 # formulate Robust Problem
-prob = lropt.RobustProblem(objective, constraints,eval_exp = eval_exp )
+prob = cvxro.RobustProblem(objective, constraints,eval_exp = eval_exp )
 
 # solve
 # seed 1,

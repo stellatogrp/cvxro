@@ -6,9 +6,9 @@ import torch
 from cvxtorch import TorchExpression
 from cvxtorch.utils.torch_utils import tensor_reshape_fortran
 
-from lropt import Ellipsoidal
-from lropt.train.batch import batchify
-from lropt.uncertain_parameter import UncertainParameter
+from cvxro import Ellipsoidal
+from cvxro.train.batch import batchify
+from cvxro.uncertain_parameter import UncertainParameter
 
 torch.manual_seed(1234)
 

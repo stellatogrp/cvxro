@@ -1,5 +1,5 @@
 Box Uncertainty
 ================
 
-.. autoclass:: lropt.Box
+.. autoclass:: cvxro.Box
    :members:

@@ -13,11 +13,11 @@ import torch
 # from tests.settings import SOLVER
 from sklearn.model_selection import train_test_split
 
-from lropt import Trainer, TrainerSettings, max_of_uncertain
-from lropt.robust_problem import RobustProblem
-from lropt.train.parameter import ContextParameter
-from lropt.uncertain_parameter import UncertainParameter
-from lropt.uncertainty_sets.ellipsoidal import Ellipsoidal
+from cvxro import Trainer, TrainerSettings, max_of_uncertain
+from cvxro.robust_problem import RobustProblem
+from cvxro.train.parameter import ContextParameter
+from cvxro.uncertain_parameter import UncertainParameter
+from cvxro.uncertainty_sets.ellipsoidal import Ellipsoidal
 
 # from tests.settings import TESTS_ATOL as ATOL
 # from tests.settings import TESTS_RTOL as RTOL
@@ -381,7 +381,7 @@ class TestEllipsoidalUncertainty(unittest.TestCase):
         initn = sc.linalg.sqrtm(np.cov(train.T))
         init_bvaln = np.mean(train, axis=0)
         # Train A and b
-        from lropt import Trainer
+        from cvxro import Trainer
 
         trainer = Trainer(prob)
         settings = TrainerSettings()

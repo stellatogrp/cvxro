@@ -1,5 +1,5 @@
 Polyhedral Uncertainty
 =======================
 
-.. autoclass:: lropt.Polyhedral
+.. autoclass:: cvxro.Polyhedral
    :members:
