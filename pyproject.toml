@@ -54,6 +54,13 @@ dev = [
     "hydra-optuna-sweeper"
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (learning/training tests)",
+    "core: marks tests as core robust optimization tests",
+]
+testpaths = ["tests"]
+
 [tool.ruff]
 exclude = [
     "build",

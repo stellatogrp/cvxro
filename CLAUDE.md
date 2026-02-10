@@ -17,12 +17,15 @@ minimize f(x) subject to g(x,u) ≤ 0 for all u ∈ U(θ)
 All commands use `uv run` to ensure the virtual environment is active:
 
 ```bash
-# Run all tests
-uv run pytest tests
+# Run core + integration tests (safe, fast)
+uv run python run_tests_safe.py tests/core/ tests/integration/ -q
+
+# Run only core tests (~2s)
+uv run pytest tests/core/ -q
 
 # Run specific test file or test
-uv run pytest tests/test_simple_opt.py
-uv run pytest tests/test_simple_opt.py::test_name -v
+uv run pytest tests/core/test_simple_opt.py
+uv run pytest tests/core/test_simple_opt.py::test_name -v
 
 # Lint check / auto-fix
 uv run ruff check cvxro/
@@ -31,6 +34,8 @@ uv run ruff check --fix cvxro/
 # Install in development mode
 uv pip install -e ".[dev]"
 ```
+
+**WARNING**: Never run `tests/learning/` tests directly — they are extremely RAM-heavy and will crash the machine. Use `run_tests_safe.py` which enforces memory limits via `RLIMIT_RSS`.
 
 ## Architecture
 
@@ -70,11 +75,21 @@ Updated uncertainty set (shape A, center b, size rho)
 |--------|---------|
 | `robust_problem.py` | `RobustProblem` class extending CVXPY Problem |
 | `uncertain_parameter.py` | `UncertainParameter` (CVXPY Parameter + uncertainty_set) |
+| `parameter.py` | `ContextParameter`, `Parameter`, `ShapeParameter`, `SizeParameter` |
 | `train/trainer.py` | `Trainer` orchestrating learning with CVXPyLayers |
 | `train/settings.py` | `TrainerSettings` (45+ hyperparameters) |
+| `train/parameter.py` | Backward-compat re-exports from `parameter.py` |
 | `uncertainty_sets/` | Set implementations with `conjugate()` methods |
 | `uncertain_canon/` | Duality-based reformulation reductions |
 | `torch_expression_generator.py` | CVXPY → PyTorch expression conversion |
+
+### Import Architecture
+
+The codebase separates **core** (no torch required) from **learning** (torch-dependent):
+
+- `__init__.py`: Core imports are eager; training imports (`Trainer`, `TrainerSettings`, predictors, etc.) are **lazy** via `__getattr__` — `import cvxro` does not load torch.
+- `robust_problem.py`: No module-level torch/training imports. Training-related imports happen lazily inside methods.
+- `parameter.py`: Canonical location for all parameter types. `train/parameter.py` re-exports for backward compatibility.
 
 ### Uncertainty Set Hierarchy
 
@@ -110,12 +125,14 @@ prob = cvxro.RobustProblem(objective, constraints)
 prob.solve()
 ```
 
-**Learning from data:**
+**Learning from data** (explicit training step required):
 ```python
 u = cvxro.UncertainParameter(dim, uncertainty_set=cvxro.Ellipsoidal())
-u.uncertainty_set.data = historical_data  # triggers learning
+u.uncertainty_set.data = historical_data
 prob = cvxro.RobustProblem(objective, constraints)
-prob.solve()  # auto-trains via Trainer
+settings = cvxro.TrainerSettings()
+cvxro.Trainer(prob).train(settings)  # explicit training step
+prob.solve()
 ```
 
 **Contextual learning** (uncertainty depends on state):
@@ -134,6 +151,24 @@ From CONVENTIONS.md:
 - Use exceptions rather than error codes
 
 Ruff config: line-length 100, Python 3.12+ target, rules E/F/I enabled.
+
+## Test Structure
+
+```
+tests/
+├── conftest.py           # Fixtures (rng), pytest markers
+├── settings.py           # SOLVER, RTOL, ATOL
+├── core/                 # 73 tests, fast (~2s), no torch needed
+├── learning/             # Training tests (SLOW, RAM-heavy — use run_tests_safe.py)
+└── integration/          # 18 tests, evaluate/portfolio
+```
+
+Markers: `@pytest.mark.slow` for learning tests, `@pytest.mark.core` for core tests.
+
+## Known Gotchas
+
+- Several training modules (`predictors/linear.py`, `predictors/nn.py`, etc.) call `torch.set_default_dtype(torch.double)` at module level. With lazy loading, this side effect doesn't run at import time. Any code creating tensors for evaluation must explicitly use `dtype=torch.float64` (not `torch.Tensor(value)`, use `torch.tensor(value, dtype=torch.float64)`).
+- `solve()` does **not** auto-train. Users must call `Trainer(prob).train(settings)` explicitly before solving.
 
 ## Dependencies
 
