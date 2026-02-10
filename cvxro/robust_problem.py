@@ -302,7 +302,7 @@ class RobustProblem(Problem):
             try:
                 self._update_trained_uncertainty_sets_for_current_context()
             except Exception:
-                logger.debug(
+                logger.warning(
                     "Failed to update trained uncertainty sets for current context",
                     exc_info=True
                 )
@@ -662,11 +662,11 @@ class RobustProblem(Problem):
                             if hasattr(xp, "data") and xp.data is not None:
                                 val = xp.data[0]
                             else:
-                                logger.warning(
-                                    "Context parameter %s has no value for "
-                                    "contextual evaluation", xp
+                                raise ValueError(
+                                    f"Context parameter {xp} has no value and no data "
+                                    "for contextual evaluation. Set .value or .data "
+                                    "before solving."
                                 )
-                                return
                         t = _torch.tensor(val, dtype=_torch.get_default_dtype())
                         t = t.unsqueeze(0)
                         x_batch.append(t)
