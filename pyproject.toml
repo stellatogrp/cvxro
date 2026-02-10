@@ -69,6 +69,7 @@ exclude = [
     "docs",
     "cvxpy_dpp",
     "*__init__.py",
+    "run_tests_safe.py",
 ]
 line-length = 100
 target-version = "py310"
