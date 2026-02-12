@@ -16,7 +16,7 @@ import time
 import cvxpy as cp
 import numpy as np
 from cvxpy.problems.objective import Maximize
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, lil_matrix
 from scipy.sparse import random as sp_random
 
 import cvxro
@@ -59,30 +59,29 @@ def benchmark(func, num_runs=10, label=""):
 
 
 def benchmark_reshape_tensor():
-    """Benchmark 1: reshape_tensor() — lil_matrix row-by-row copy."""
+    """Benchmark 1: reshape_tensor() — optimized vs old approach.
+
+    The old lil_matrix row-by-row loop is kept here as a reference baseline
+    to verify the optimization remains effective and to detect regressions.
+    """
     print("\n" + "=" * 70)
     print("BENCHMARK 1: reshape_tensor()")
-    print("Compares current lil_matrix loop vs permutation-index approach")
+    print("Compares optimized (current) vs old lil_matrix loop (reference)")
     print("=" * 70)
 
-    def _calc_source_row(target_row, num_constraints, n_var):
-        constraint_num = 0 if n_var == 0 else target_row % n_var
-        var_num = target_row if n_var == 0 else target_row // n_var
-        return constraint_num * num_constraints + var_num
-
-    def reshape_tensor_permutation(T_Ab, n_var):
-        """Alternative: permutation-index approach using csc advanced indexing."""
+    def reshape_tensor_old(T_Ab, n_var):
+        """Old approach: lil_matrix row-by-row copy (pre-optimization baseline)."""
         T_Ab = csc_matrix(T_Ab)
         n_var_full = n_var + 1
         num_rows = T_Ab.shape[0]
         num_constraints = num_rows // n_var_full
-
-        # Build permutation array
-        perm = np.array([
-            _calc_source_row(i, num_constraints, n_var_full)
-            for i in range(num_rows)
-        ])
-        return T_Ab[perm, :]
+        T_Ab_res = lil_matrix(T_Ab.shape)
+        for target_row in range(num_rows):
+            constraint_num = 0 if n_var_full == 0 else target_row % n_var_full
+            var_num = target_row if n_var_full == 0 else target_row // n_var_full
+            source_row = constraint_num * num_constraints + var_num
+            T_Ab_res[target_row, :] = T_Ab[source_row, :]
+        return T_Ab_res
 
     for size_label, n_var, density in [
         ("small (n=5)", 5, 0.3),
@@ -98,12 +97,12 @@ def benchmark_reshape_tensor():
         T_Ab = sp_random(num_rows, num_cols, density=density, format="coo")
 
         benchmark(
-            lambda T=T_Ab, nv=n_var: reshape_tensor(T, nv),
-            num_runs=50, label="Current (lil_matrix loop)")
+            lambda T=T_Ab, nv=n_var: reshape_tensor_old(T, nv),
+            num_runs=50, label="Old (lil_matrix loop)")
 
         benchmark(
-            lambda T=T_Ab, nv=n_var: reshape_tensor_permutation(T, nv),
-            num_runs=50, label="Alternative (permutation index)")
+            lambda T=T_Ab, nv=n_var: reshape_tensor(T, nv),
+            num_runs=50, label="Current (permutation index)")
 
 
 def benchmark_get_problem_data():
@@ -328,6 +327,10 @@ def benchmark_full_solve_breakdown():
         t_solve = benchmark(stage_solve, num_runs=5, label="Stage 4: CVXPY solve (deterministic)")
 
         if t_total > 0:
+            # Percentages are approximate: each stage is timed independently with
+            # fresh problem construction, so run-to-run variance means they may not
+            # sum to exactly 100%. The max(0, ...) on RemoveUncertainty handles
+            # cases where timing noise makes the subtraction negative.
             print("\n  Approximate breakdown (% of total):")
             print(f"    Canonicalization:              ~{t_canon/t_total*100:.1f}%")
             print(f"    generate_torch_expressions:    ~{t_torch/t_total*100:.1f}%")

@@ -56,7 +56,7 @@ def profile_config(name, problem_factory, num_runs=3):
     print(f"Configuration: {name}")
     print(f"{'='*70}")
 
-    # Warmup run (first solve triggers imports and JIT)
+    # Warmup run (first solve triggers lazy imports and solver initialization)
     prob = problem_factory()
     prob.solve(solver="CLARABEL")
     del prob

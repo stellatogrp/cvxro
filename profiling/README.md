@@ -55,7 +55,7 @@ Outputs scaling ratio tables. Generates matplotlib plots if available.
 
 Isolates and benchmarks specific suspected bottlenecks:
 
-1. **`reshape_tensor()`**: Compares current lil_matrix row-by-row loop against a permutation-index approach
+1. **`reshape_tensor()`**: Benchmarks the optimized permutation-index approach against the old lil_matrix row-by-row loop (kept as a reference baseline)
 2. **`get_problem_data()`**: Measures CVXPY internal canonicalization cost as a fraction of total
 3. **`generate_torch_expressions()`**: Quantifies the overhead and potential speedup from deferring this call
 4. **Variable creation**: Cost of creating `cp.Variable(shape)` in nested loops
@@ -64,7 +64,7 @@ Isolates and benchmarks specific suspected bottlenecks:
 
 ### `run_profiling.sh` — Runner Script
 
-Runs all profiling scripts and saves consolidated output to `results/`.
+Runs all profiling scripts in sequence (hotspots first as the quickest, then scaling, memory, and cProfile) and saves consolidated output to `results/`.
 
 ## Output
 
@@ -82,5 +82,5 @@ Results are saved to `profiling/results/`:
 Key things to look for:
 - What fraction of `solve()` is CVXRO overhead vs CVXPY solver?
 - How much time does `generate_torch_expressions()` add (it's not needed for solve)?
-- Does `reshape_tensor()` become a bottleneck at larger sizes?
+- Is `reshape_tensor()` still fast after future changes? (Was a major bottleneck before optimization.)
 - Where are the memory hotspots?

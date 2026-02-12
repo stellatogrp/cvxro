@@ -55,7 +55,8 @@ if [ -n "$1" ]; then
     exit 0
 fi
 
-# Run all scripts
+# Run all scripts: hotspots first (quickest, most targeted), then scaling,
+# memory, and finally cProfile (most detailed, slowest).
 echo "CVXRO Profiling Suite"
 echo "Log: $LOG_FILE"
 echo ""
