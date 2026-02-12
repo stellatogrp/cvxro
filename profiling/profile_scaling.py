@@ -9,7 +9,6 @@ Measures how solve() time scales with:
 Outputs tables and optionally generates matplotlib plots.
 """
 
-import sys
 import time
 
 import cvxpy as cp
@@ -78,7 +77,10 @@ def scaling_dimension():
     prev_mean = None
     for n in dims:
         np.random.seed(42)
-        factory = lambda n=n: make_problem(n, num_constraints=5, num_uncertain=1)
+
+        def factory(n=n):
+            return make_problem(n, num_constraints=5, num_uncertain=1)
+
         mean, std, mn = time_solve(factory)
         ratio = mean / prev_mean if prev_mean else 1.0
         print(f"{n:>6} {mean:>10.4f} {std:>10.4f} {mn:>10.4f} {ratio:>8.2f}x")
@@ -104,7 +106,10 @@ def scaling_constraints():
     prev_mean = None
     for m in constraints:
         np.random.seed(42)
-        factory = lambda m=m: make_problem(20, num_constraints=m, num_uncertain=1)
+
+        def factory(m=m):
+            return make_problem(20, num_constraints=m, num_uncertain=1)
+
         mean, std, mn = time_solve(factory)
         ratio = mean / prev_mean if prev_mean else 1.0
         print(f"{m:>6} {mean:>10.4f} {std:>10.4f} {mn:>10.4f} {ratio:>8.2f}x")
@@ -130,7 +135,10 @@ def scaling_uncertain_params():
     prev_mean = None
     for p in num_params:
         np.random.seed(42)
-        factory = lambda p=p: make_problem(20, num_constraints=5, num_uncertain=p)
+
+        def factory(p=p):
+            return make_problem(20, num_constraints=5, num_uncertain=p)
+
         mean, std, mn = time_solve(factory)
         ratio = mean / prev_mean if prev_mean else 1.0
         print(f"{p:>8} {mean:>10.4f} {std:>10.4f} {mn:>10.4f} {ratio:>8.2f}x")

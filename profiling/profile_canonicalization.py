@@ -82,13 +82,13 @@ def profile_config(name, problem_factory, num_runs=3):
     profiler.disable()
 
     # Print top functions by cumulative time
-    print(f"\n--- Top 30 by cumulative time ---")
+    print("\n--- Top 30 by cumulative time ---")
     stats = pstats.Stats(profiler, stream=sys.stdout)
     stats.strip_dirs()
     stats.sort_stats("cumulative")
     stats.print_stats(30)
 
-    print(f"\n--- Top 30 by total time ---")
+    print("\n--- Top 30 by total time ---")
     stats.sort_stats("tottime")
     stats.print_stats(30)
 

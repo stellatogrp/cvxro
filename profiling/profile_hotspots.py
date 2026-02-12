@@ -16,7 +16,8 @@ import time
 import cvxpy as cp
 import numpy as np
 from cvxpy.problems.objective import Maximize
-from scipy.sparse import coo_matrix, csc_matrix, lil_matrix, random as sp_random
+from scipy.sparse import csc_matrix
+from scipy.sparse import random as sp_random
 
 import cvxro
 from cvxro.uncertain_canon.remove_uncertain_maximum import RemoveSumOfMaxOfUncertain
@@ -120,7 +121,6 @@ def benchmark_get_problem_data():
         def time_get_problem_data():
             prob = make_problem(n, m)
             # Apply the reductions up to canonicalization
-            from cvxro.uncertain_canon.flip_objective import FlipObjective
             reductions = [RemoveSumOfMaxOfUncertain(), UncertainCanonicalization()]
             chain, problem_canon, inv_data = gen_and_apply_chain(prob, reductions)
             # Now time get_problem_data on the canonical problem
@@ -148,7 +148,9 @@ def benchmark_get_problem_data():
             reductions = [RemoveSumOfMaxOfUncertain(), UncertainCanonicalization()]
             gen_and_apply_chain(p, reductions)
 
-        benchmark(full_canon, num_runs=20, label="Full canonicalization (includes get_problem_data)")
+        benchmark(
+            full_canon, num_runs=20,
+            label="Full canonicalization (includes get_problem_data)")
 
 
 def benchmark_generate_torch_expressions():
@@ -162,8 +164,8 @@ def benchmark_generate_torch_expressions():
         print(f"\n  --- n={n}, m={m} ---")
         np.random.seed(42)
 
-        from cvxro.uncertain_canon.flip_objective import FlipObjective
         from cvxro.torch_expression_generator import generate_torch_expressions
+        from cvxro.uncertain_canon.flip_objective import FlipObjective
 
         def full_remove_uncertainty():
             prob = make_problem(n, m)
@@ -250,7 +252,7 @@ def benchmark_has_unc_param():
             expr.parameters()
 
         benchmark(call_parameters, num_runs=100,
-                  label=f"  -> expr.parameters() on one constraint")
+                  label="  -> expr.parameters() on one constraint")
 
 
 def benchmark_full_solve_breakdown():
@@ -264,7 +266,6 @@ def benchmark_full_solve_breakdown():
         print(f"\n  --- n={n}, m={m} ---")
         np.random.seed(42)
 
-        from cvxro.uncertain_canon.flip_objective import FlipObjective
         from cvxro.torch_expression_generator import generate_torch_expressions
 
         # Total solve time
@@ -327,7 +328,7 @@ def benchmark_full_solve_breakdown():
         t_solve = benchmark(stage_solve, num_runs=5, label="Stage 4: CVXPY solve (deterministic)")
 
         if t_total > 0:
-            print(f"\n  Approximate breakdown (% of total):")
+            print("\n  Approximate breakdown (% of total):")
             print(f"    Canonicalization:              ~{t_canon/t_total*100:.1f}%")
             print(f"    generate_torch_expressions:    ~{t_torch/t_total*100:.1f}%")
             print(f"    RemoveUncertainty (estimated): ~"

@@ -123,7 +123,7 @@ def profile_stages(n, num_constraints=5):
     print(f"\n  Overall peak memory: {format_bytes(peak_mem)}")
 
     # Deltas
-    print(f"\n  Memory deltas between stages:")
+    print("\n  Memory deltas between stages:")
     snapshots = [
         ("Canonicalization", snap_baseline, snap_after_canon),
         ("generate_torch_expressions", snap_after_canon, snap_after_torch),
