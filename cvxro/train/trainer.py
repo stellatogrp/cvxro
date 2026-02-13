@@ -1027,6 +1027,14 @@ class Trainer:
             g=self.g, g_shapes=self.g_shapes, batch_int=batch_int, eval_args=eval_args
         )
 
+    def _smooth_constraint(self, h):
+        """Apply smoothing to constraint values for AL penalty terms."""
+        if self.settings.constraint_smoothing == "softplus":
+            beta = self.settings.softplus_beta
+            return torch.nn.functional.softplus(h, beta=beta)
+        else:  # "relu" (default, current behavior)
+            return torch.maximum(h, torch.zeros_like(h))
+
     def lagrangian(
         self,
         batch_int,
@@ -1061,9 +1069,13 @@ class Trainer:
         """
         F = self.train_objective(batch_int, eval_args=eval_args)
         H = self.train_constraint(
-            batch_int, eval_args=eval_args, alpha=alpha,eta=eta, kappa=kappa
+            batch_int, eval_args=eval_args, alpha=alpha, eta=eta, kappa=kappa
         )
-        return F + lam @ H + (mu / 2) * (torch.linalg.norm(H) ** 2), H.detach()
+        H_plus = self._smooth_constraint(H)
+        if isinstance(mu, torch.Tensor):
+            return F + lam @ H_plus + (mu / 2) @ (H_plus ** 2), H.detach()
+        else:
+            return F + lam @ H_plus + (mu / 2) * (torch.linalg.norm(H_plus) ** 2), H.detach()
 
     def _reduce_variables(self, z_batch: list[torch.Tensor]) -> list[torch.Tensor]:
         """
@@ -1082,7 +1094,7 @@ class Trainer:
 
     def _line_search(self, step_num: int, a_tch: torch.Tensor, b_tch: torch.Tensor,
                      rho_tch: torch.Tensor, alpha: torch.Tensor,
-                     lam: torch.Tensor, mu: float,
+                     lam: torch.Tensor, mu: "float | torch.Tensor",
                      opt: torch.optim.Optimizer, prev_states: list,
                      seed_num: int,prev_fin_cost: torch.Tensor) \
                         -> tuple[CONSTRAINT_STATUS, torch.Tensor, torch.Tensor, torch.Tensor,
@@ -1148,19 +1160,20 @@ class Trainer:
                 avg_cost = avg_cost.repeat(3)
 
             if self.settings.constraint_cvar:
+                h_plus = self._smooth_constraint(constr_cost)
                 if self.num_g_total > 1:
-                    fin_cost = (
-                        cost + lam @ torch.maximum(
-                            constr_cost,torch.zeros(self.num_g_total)) + (
-                                mu / 2) * (torch.linalg.norm(
-                                    torch.maximum(constr_cost,
-                                                    torch.zeros(self.num_g_total))) ** 2)
-                    )
+                    if isinstance(mu, torch.Tensor):
+                        fin_cost = cost + lam @ h_plus + (mu / 2) @ (h_plus ** 2)
+                    else:
+                        fin_cost = (
+                            cost + lam @ h_plus
+                            + (mu / 2) * (torch.linalg.norm(h_plus) ** 2)
+                        )
                 else:
-                    fin_cost = cost + lam * torch.maximum(
-                        constr_cost,torch.zeros(1)) + (
-                            mu / 2) * (torch.maximum(
-                                constr_cost,torch.zeros(1))**2)
+                    if isinstance(mu, torch.Tensor):
+                        fin_cost = cost + lam * h_plus + (mu[0] / 2) * (h_plus ** 2)
+                    else:
+                        fin_cost = cost + lam * h_plus + (mu / 2) * (h_plus ** 2)
             elif self.settings.delage_coverage:
                 fin_cost = (1-self.settings.coverage_gamma)*cost + \
                     self.settings.coverage_gamma*constr_cost
@@ -1251,6 +1264,17 @@ class Trainer:
         # y's and cvxpylayer begin
         lam = self.settings.init_lam * torch.ones(self.num_g_total, dtype=s.DTYPE)
         mu = self.settings.init_mu
+        strategy = self.settings.dual_update_strategy
+
+        if strategy == "pi":
+            # PI controller state: EMA of constraint signal
+            xi = torch.zeros(self.num_g_total, dtype=s.DTYPE)
+            xi_prev = torch.zeros(self.num_g_total, dtype=s.DTYPE)
+        elif strategy == "adaptive":
+            # Per-constraint adaptive penalty
+            mu = self.settings.init_mu * torch.ones(self.num_g_total, dtype=s.DTYPE)
+            v_bar = torch.zeros(self.num_g_total, dtype=s.DTYPE)  # EMA of h^2
+
         seed_num = 0
         curr_cvar = np.inf
         prev_fin_cost = np.inf
@@ -1294,19 +1318,63 @@ class Trainer:
 
             if step_num % self.settings.aug_lag_update_interval == 0:
                 seed_num += 1
-                prev_fin_cost = np.inf
-                if (
-                    torch.norm(constr_cost.detach())
-                    <= self.settings.lambda_update_threshold * curr_cvar
-                ):
-                    curr_cvar = torch.norm(constr_cost.detach())
+                if self.settings.reset_prev_cost_on_al_update:
+                    prev_fin_cost = np.inf
+
+                h = self._smooth_constraint(constr_cost.detach())
+
+                if strategy == "classic":
+                    # Original behavior (unchanged)
+                    if (
+                        torch.norm(constr_cost.detach())
+                        <= self.settings.lambda_update_threshold * curr_cvar
+                    ):
+                        curr_cvar = torch.norm(constr_cost.detach())
+                        lam += torch.minimum(
+                            mu * constr_cost.detach(),
+                            self.settings.lambda_update_max
+                            * torch.ones(self.num_g_total, dtype=s.DTYPE),
+                        )
+                    else:
+                        mu = self.settings.mu_multiplier * mu
+
+                elif strategy == "pi":
+                    # PI controller (arXiv:2406.04558)
+                    nu = self.settings.pi_nu
+                    xi = nu * xi + (1 - nu) * h
+                    lam = torch.maximum(
+                        lam + self.settings.pi_ki * h
+                        + self.settings.pi_kp * (xi - xi_prev),
+                        torch.zeros(self.num_g_total, dtype=s.DTYPE),
+                    )
+                    xi_prev = xi.clone()
+                    # Still update mu with classic rule as fallback
+                    if (
+                        torch.norm(h)
+                        > self.settings.lambda_update_threshold * curr_cvar
+                    ):
+                        mu = self.settings.mu_multiplier * mu
+                    else:
+                        curr_cvar = torch.norm(h)
+
+                elif strategy == "adaptive":
+                    # PECANN-CAPU style adaptive penalty (arXiv:2508.15695)
+                    zeta = self.settings.penalty_ema_decay
+                    eta_s = self.settings.penalty_eta_scale
+                    eps = self.settings.penalty_eps
+                    # EMA of squared constraint values
+                    v_bar = zeta * v_bar + (1 - zeta) * h ** 2
+                    # Monotonic penalty floor
+                    mu = torch.maximum(mu, eta_s / torch.sqrt(v_bar + eps))
+                    # Standard dual update (always, no threshold gate)
                     lam += torch.minimum(
-                        mu * constr_cost.detach(),
+                        mu * h,
                         self.settings.lambda_update_max
                         * torch.ones(self.num_g_total, dtype=s.DTYPE),
                     )
-                else:
-                    mu = self.settings.mu_multiplier * mu
+                    lam = torch.maximum(
+                        lam, torch.zeros(self.num_g_total, dtype=s.DTYPE)
+                    )
 
             new_row = train_stats.generate_train_row(
                 self._a_tch,
@@ -2059,7 +2127,7 @@ class TrainLoopStats:
         row_dict["step"] = self.step_num
         row_dict["A_norm"] = np.linalg.norm(a_tch.detach().numpy().copy())
         row_dict["lam_list"] = lam.detach().numpy().copy()
-        row_dict["mu"] = mu
+        row_dict["mu"] = mu.detach().numpy().copy() if isinstance(mu, torch.Tensor) else mu
         row_dict["alpha"] = alpha.item()
         row_dict["alphagrad"] = alpha.grad
         if contextual:
