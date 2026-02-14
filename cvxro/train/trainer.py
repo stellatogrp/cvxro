@@ -1362,10 +1362,25 @@ class Trainer:
                     zeta = self.settings.penalty_ema_decay
                     eta_s = self.settings.penalty_eta_scale
                     eps = self.settings.penalty_eps
-                    # EMA of squared constraint values
-                    v_bar = zeta * v_bar + (1 - zeta) * h ** 2
-                    # Monotonic penalty floor
-                    mu = torch.maximum(mu, eta_s / torch.sqrt(v_bar + eps))
+                    # Mask: only update mu for violated constraints
+                    raw_h = constr_cost.detach()
+                    if self.settings.penalty_satisfied_guard:
+                        violated = raw_h > 0
+                    else:
+                        violated = torch.ones(
+                            self.num_g_total, dtype=torch.bool
+                        )
+                    # EMA of squared constraint values (only for violated)
+                    v_bar = torch.where(
+                        violated,
+                        zeta * v_bar + (1 - zeta) * h ** 2,
+                        v_bar,
+                    )
+                    # Monotonic penalty floor (only for violated)
+                    mu_candidate = torch.maximum(
+                        mu, eta_s / torch.sqrt(v_bar + eps)
+                    )
+                    mu = torch.where(violated, mu_candidate, mu)
                     # Standard dual update (always, no threshold gate)
                     lam += torch.minimum(
                         mu * h,

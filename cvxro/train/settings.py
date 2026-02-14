@@ -270,6 +270,7 @@ class TrainerSettings:
         self.penalty_ema_decay = 0.99   # zeta in EMA: v_bar = zeta*v_bar + (1-zeta)*h^2
         self.penalty_eta_scale = 1.0    # eta scale: mu = max(mu, eta_scale/sqrt(v_bar+eps))
         self.penalty_eps = 1e-8         # eps for numerical stability
+        self.penalty_satisfied_guard = True  # freeze mu growth on satisfied constraints
 
         # Constraint smoothing
         self.constraint_smoothing = "relu"  # "relu" (current max(h,0)) | "softplus"
