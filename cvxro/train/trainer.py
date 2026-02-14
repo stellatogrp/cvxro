@@ -1027,14 +1027,6 @@ class Trainer:
             g=self.g, g_shapes=self.g_shapes, batch_int=batch_int, eval_args=eval_args
         )
 
-    def _smooth_constraint(self, h):
-        """Apply smoothing to constraint values for AL penalty terms."""
-        if self.settings.constraint_smoothing == "softplus":
-            beta = self.settings.softplus_beta
-            return torch.nn.functional.softplus(h, beta=beta)
-        else:  # "relu" (default, current behavior)
-            return torch.maximum(h, torch.zeros_like(h))
-
     def lagrangian(
         self,
         batch_int,
@@ -1071,7 +1063,7 @@ class Trainer:
         H = self.train_constraint(
             batch_int, eval_args=eval_args, alpha=alpha, eta=eta, kappa=kappa
         )
-        H_plus = self._smooth_constraint(H)
+        H_plus = torch.maximum(H, torch.zeros_like(H))
         if isinstance(mu, torch.Tensor):
             return F + lam @ H_plus + (mu / 2) @ (H_plus ** 2), H.detach()
         else:
@@ -1160,7 +1152,7 @@ class Trainer:
                 avg_cost = avg_cost.repeat(3)
 
             if self.settings.constraint_cvar:
-                h_plus = self._smooth_constraint(constr_cost)
+                h_plus = torch.maximum(constr_cost, torch.zeros_like(constr_cost))
                 if self.num_g_total > 1:
                     if isinstance(mu, torch.Tensor):
                         fin_cost = cost + lam @ h_plus + (mu / 2) @ (h_plus ** 2)
@@ -1266,11 +1258,7 @@ class Trainer:
         mu = self.settings.init_mu
         strategy = self.settings.dual_update_strategy
 
-        if strategy == "pi":
-            # PI controller state: EMA of constraint signal
-            xi = torch.zeros(self.num_g_total, dtype=s.DTYPE)
-            xi_prev = torch.zeros(self.num_g_total, dtype=s.DTYPE)
-        elif strategy == "adaptive":
+        if strategy == "adaptive":
             # Per-constraint adaptive penalty
             mu = self.settings.init_mu * torch.ones(self.num_g_total, dtype=s.DTYPE)
             v_bar = torch.zeros(self.num_g_total, dtype=s.DTYPE)  # EMA of h^2
@@ -1321,7 +1309,7 @@ class Trainer:
                 if self.settings.reset_prev_cost_on_al_update:
                     prev_fin_cost = np.inf
 
-                h = self._smooth_constraint(constr_cost.detach())
+                h = torch.maximum(constr_cost.detach(), torch.zeros_like(constr_cost.detach()))
 
                 if strategy == "classic":
                     # Original behavior (unchanged)
@@ -1338,27 +1326,13 @@ class Trainer:
                     else:
                         mu = self.settings.mu_multiplier * mu
 
-                elif strategy == "pi":
-                    # PI controller (arXiv:2406.04558)
-                    nu = self.settings.pi_nu
-                    xi = nu * xi + (1 - nu) * h
-                    lam = torch.maximum(
-                        lam + self.settings.pi_ki * h
-                        + self.settings.pi_kp * (xi - xi_prev),
-                        torch.zeros(self.num_g_total, dtype=s.DTYPE),
-                    )
-                    xi_prev = xi.clone()
-                    # Still update mu with classic rule as fallback
-                    if (
-                        torch.norm(h)
-                        > self.settings.lambda_update_threshold * curr_cvar
-                    ):
-                        mu = self.settings.mu_multiplier * mu
-                    else:
-                        curr_cvar = torch.norm(h)
-
                 elif strategy == "adaptive":
-                    # PECANN-CAPU style adaptive penalty (arXiv:2508.15695)
+                    # Adaptive per-constraint penalty (arXiv:2508.15695)
+                    #   1. EMA of squared violations: v = zeta*v + (1-zeta)*h²
+                    #   2. RMSprop-style penalty floor: mu = max(mu, eta/sqrt(v+eps))
+                    #   3. Satisfied guard: freeze mu when h <= 0
+                    #   4. Hard cap: mu = min(mu, mu_max)
+                    #   5. Ungated lambda update: lam += mu * h
                     zeta = self.settings.penalty_ema_decay
                     eta_s = self.settings.penalty_eta_scale
                     eps = self.settings.penalty_eps
@@ -1381,6 +1355,12 @@ class Trainer:
                         mu, eta_s / torch.sqrt(v_bar + eps)
                     )
                     mu = torch.where(violated, mu_candidate, mu)
+                    # Hard cap to prevent explosion when v_bar ≈ 0
+                    mu = torch.minimum(
+                        mu,
+                        self.settings.penalty_mu_max
+                        * torch.ones(self.num_g_total, dtype=s.DTYPE),
+                    )
                     # Standard dual update (always, no threshold gate)
                     lam += torch.minimum(
                         mu * h,

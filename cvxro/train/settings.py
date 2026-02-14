@@ -259,22 +259,22 @@ class TrainerSettings:
         self.avg_scale = 0
 
         # --- AL improvement settings ---
-        self.dual_update_strategy = "classic"  # "classic" | "pi" | "adaptive"
-
-        # PI controller settings (arXiv:2406.04558)
-        self.pi_kp = 0.5        # proportional gain
-        self.pi_ki = 0.1        # integral gain
-        self.pi_nu = 0.9        # EMA smoothing factor for constraint signal
+        self.dual_update_strategy = "classic"  # "classic" | "adaptive"
 
         # Adaptive penalty settings (PECANN-CAPU style, arXiv:2508.15695)
-        self.penalty_ema_decay = 0.99   # zeta in EMA: v_bar = zeta*v_bar + (1-zeta)*h^2
-        self.penalty_eta_scale = 1.0    # eta scale: mu = max(mu, eta_scale/sqrt(v_bar+eps))
-        self.penalty_eps = 1e-8         # eps for numerical stability
-        self.penalty_satisfied_guard = True  # freeze mu growth on satisfied constraints
-
-        # Constraint smoothing
-        self.constraint_smoothing = "relu"  # "relu" (current max(h,0)) | "softplus"
-        self.softplus_beta = 10.0           # sharpness: higher -> closer to ReLU
+        #   ema_decay (zeta): EMA smoothing for squared violations
+        #     v_bar = zeta * v_bar + (1 - zeta) * h^2
+        #   eta_scale: RMSprop-style penalty floor
+        #     mu = max(mu, eta_scale / sqrt(v_bar + eps))
+        #   eps: numerical stability constant
+        #   satisfied_guard: freeze mu growth when h <= 0
+        #   mu_max: hard cap on per-constraint penalty (prevents explosion
+        #     when v_bar ≈ 0 in early iterations)
+        self.penalty_ema_decay = 0.99
+        self.penalty_eta_scale = 1.0
+        self.penalty_eps = 1e-8
+        self.penalty_satisfied_guard = True
+        self.penalty_mu_max = 100.0
 
         # Shared improvement
         self.reset_prev_cost_on_al_update = True  # set False to disable prev_fin_cost reset

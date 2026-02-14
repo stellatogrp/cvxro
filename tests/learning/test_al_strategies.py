@@ -1,7 +1,7 @@
 """Tests for augmented Lagrangian improvement strategies.
 
-Tests the three dual-update strategies (classic, pi, adaptive),
-constraint smoothing (relu, softplus), and related settings.
+Tests the two dual-update strategies (classic, adaptive)
+and related settings.
 
 All tests use minimal problem sizes (n=2, N=20) and few iterations
 to keep memory low and runtime fast.
@@ -13,7 +13,6 @@ import cvxpy as cp
 import numpy as np
 import numpy.testing as npt
 import scipy as sc
-import torch
 
 from cvxro import Trainer, TrainerSettings
 from cvxro.parameter import ContextParameter
@@ -90,100 +89,27 @@ def _base_settings(data, n=2, N=20):
 
 
 class TestALSettings(unittest.TestCase):
-    """Test that new AL settings fields exist and are configurable."""
+    """Test that AL settings fields exist and are configurable."""
 
     def test_default_values(self):
         s = TrainerSettings()
         self.assertEqual(s.dual_update_strategy, "classic")
-        self.assertEqual(s.constraint_smoothing, "relu")
-        self.assertAlmostEqual(s.softplus_beta, 10.0)
-        self.assertAlmostEqual(s.pi_kp, 0.5)
-        self.assertAlmostEqual(s.pi_ki, 0.1)
-        self.assertAlmostEqual(s.pi_nu, 0.9)
         self.assertAlmostEqual(s.penalty_ema_decay, 0.99)
         self.assertAlmostEqual(s.penalty_eta_scale, 1.0)
         self.assertAlmostEqual(s.penalty_eps, 1e-8)
+        self.assertAlmostEqual(s.penalty_mu_max, 100.0)
         self.assertTrue(s.reset_prev_cost_on_al_update)
 
     def test_set_strategy(self):
         s = TrainerSettings()
-        for strategy in ("classic", "pi", "adaptive"):
+        for strategy in ("classic", "adaptive"):
             s.dual_update_strategy = strategy
             self.assertEqual(s.dual_update_strategy, strategy)
-
-    def test_set_smoothing(self):
-        s = TrainerSettings()
-        for smoothing in ("relu", "softplus"):
-            s.constraint_smoothing = smoothing
-            self.assertEqual(s.constraint_smoothing, smoothing)
 
     def test_slots_reject_unknown(self):
         s = TrainerSettings()
         with self.assertRaises(AttributeError):
             s.nonexistent_field = 1
-
-
-class TestSmoothConstraint(unittest.TestCase):
-    """Test the _smooth_constraint method directly."""
-
-    def setUp(self):
-        self.n = 2
-        self.N = 20
-        _, self.trainer, self.data = _make_portfolio_problem(self.n, self.N)
-        self.trainer.settings = _base_settings(self.data, self.n, self.N)
-
-    def test_relu_positive(self):
-        """Relu should pass through positive values."""
-        self.trainer.settings.constraint_smoothing = "relu"
-        h = torch.tensor([0.5, 1.0, 2.0])
-        result = self.trainer._smooth_constraint(h)
-        npt.assert_allclose(result.numpy(), [0.5, 1.0, 2.0])
-
-    def test_relu_negative(self):
-        """Relu should zero out negative values."""
-        self.trainer.settings.constraint_smoothing = "relu"
-        h = torch.tensor([-1.0, -0.5, 0.0])
-        result = self.trainer._smooth_constraint(h)
-        npt.assert_allclose(result.numpy(), [0.0, 0.0, 0.0])
-
-    def test_softplus_positive(self):
-        """Softplus should be close to identity for large positive values."""
-        self.trainer.settings.constraint_smoothing = "softplus"
-        self.trainer.settings.softplus_beta = 10.0
-        h = torch.tensor([2.0, 5.0])
-        result = self.trainer._smooth_constraint(h)
-        npt.assert_allclose(result.numpy(), h.numpy(), atol=0.1)
-
-    def test_softplus_negative(self):
-        """Softplus should be small but positive for negative values."""
-        self.trainer.settings.constraint_smoothing = "softplus"
-        self.trainer.settings.softplus_beta = 10.0
-        h = torch.tensor([-2.0, -5.0])
-        result = self.trainer._smooth_constraint(h)
-        # Should be > 0 (unlike relu which gives 0)
-        self.assertTrue((result > 0).all())
-        # Should be close to 0
-        self.assertTrue((result < 0.1).all())
-
-    def test_softplus_gradient_at_zero(self):
-        """Softplus should have nonzero gradient at h=0 (unlike relu)."""
-        self.trainer.settings.constraint_smoothing = "softplus"
-        self.trainer.settings.softplus_beta = 10.0
-        h = torch.tensor([0.0], requires_grad=True)
-        result = self.trainer._smooth_constraint(h)
-        result.backward()
-        # Softplus gradient at 0 is sigmoid(0) = 0.5
-        self.assertGreater(h.grad.item(), 0.0)
-
-    def test_softplus_near_zero_nonzero(self):
-        """Softplus at h=-0.01 should still give nonzero value (gradient signal)."""
-        self.trainer.settings.constraint_smoothing = "softplus"
-        self.trainer.settings.softplus_beta = 10.0
-        h = torch.tensor([-0.01], requires_grad=True)
-        result = self.trainer._smooth_constraint(h)
-        result.backward()
-        self.assertGreater(result.item(), 0.0)
-        self.assertGreater(h.grad.item(), 0.0)
 
 
 class TestClassicStrategy(unittest.TestCase):
@@ -208,65 +134,6 @@ class TestClassicStrategy(unittest.TestCase):
         result = self.trainer.train(settings=settings)
         mu_val = result.df["mu"].iloc[-1]
         self.assertIsInstance(mu_val, float)
-
-    def test_classic_with_softplus(self):
-        """Classic strategy with softplus smoothing should complete."""
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "classic"
-        settings.constraint_smoothing = "softplus"
-        settings.softplus_beta = 10.0
-        result = self.trainer.train(settings=settings)
-        self.assertIsNotNone(result.df)
-
-
-class TestPIStrategy(unittest.TestCase):
-    """Test PI controller dual-update strategy."""
-
-    def setUp(self):
-        self.n = 2
-        self.N = 20
-        _, self.trainer, self.data = _make_portfolio_problem(self.n, self.N)
-
-    def test_pi_trains(self):
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "pi"
-        result = self.trainer.train(settings=settings)
-        self.assertIsNotNone(result.df)
-        self.assertGreater(len(result.df), 0)
-
-    def test_pi_lambda_nonneg(self):
-        """PI controller should keep lambda >= 0."""
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "pi"
-        result = self.trainer.train(settings=settings)
-        for lam_arr in result.df["lam_list"]:
-            self.assertTrue(np.all(lam_arr >= 0))
-
-    def test_pi_mu_is_scalar(self):
-        """PI strategy keeps mu scalar (only classic mu update as fallback)."""
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "pi"
-        result = self.trainer.train(settings=settings)
-        mu_val = result.df["mu"].iloc[-1]
-        self.assertIsInstance(mu_val, float)
-
-    def test_pi_with_softplus(self):
-        """PI + softplus should complete."""
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "pi"
-        settings.constraint_smoothing = "softplus"
-        result = self.trainer.train(settings=settings)
-        self.assertIsNotNone(result.df)
-
-    def test_pi_custom_gains(self):
-        """Training should work with custom PI gains."""
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "pi"
-        settings.pi_kp = 1.0
-        settings.pi_ki = 0.5
-        settings.pi_nu = 0.5
-        result = self.trainer.train(settings=settings)
-        self.assertIsNotNone(result.df)
 
 
 class TestAdaptiveStrategy(unittest.TestCase):
@@ -315,13 +182,18 @@ class TestAdaptiveStrategy(unittest.TestCase):
         for lam_arr in result.df["lam_list"]:
             self.assertTrue(np.all(lam_arr >= -1e-10))
 
-    def test_adaptive_with_softplus(self):
-        """Adaptive + softplus should complete."""
+    def test_adaptive_mu_cap(self):
+        """Adaptive mu should never exceed penalty_mu_max."""
         settings = _base_settings(self.data, self.n, self.N)
         settings.dual_update_strategy = "adaptive"
-        settings.constraint_smoothing = "softplus"
+        settings.penalty_mu_max = 5.0  # low cap to test enforcement
         result = self.trainer.train(settings=settings)
-        self.assertIsNotNone(result.df)
+        for mu_val in result.df["mu"]:
+            if hasattr(mu_val, '__len__'):
+                self.assertTrue(np.all(mu_val <= 5.0 + 1e-10),
+                                f"mu exceeded cap: {mu_val}")
+            else:
+                self.assertLessEqual(mu_val, 5.0 + 1e-10)
 
     def test_adaptive_custom_penalty_params(self):
         """Training should work with custom adaptive penalty params."""
@@ -349,14 +221,6 @@ class TestResetPrevCost(unittest.TestCase):
         result = self.trainer.train(settings=settings)
         self.assertIsNotNone(result.df)
 
-    def test_no_reset_with_pi(self):
-        """PI + no reset should complete."""
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "pi"
-        settings.reset_prev_cost_on_al_update = False
-        result = self.trainer.train(settings=settings)
-        self.assertIsNotNone(result.df)
-
     def test_no_reset_with_adaptive(self):
         """Adaptive + no reset should complete."""
         settings = _base_settings(self.data, self.n, self.N)
@@ -376,7 +240,7 @@ class TestStrategyCrossSettings(unittest.TestCase):
 
     def test_all_strategies_same_seed_deterministic(self):
         """Each strategy should produce deterministic results with same seed."""
-        for strategy in ("classic", "pi", "adaptive"):
+        for strategy in ("classic", "adaptive"):
             results = []
             for _ in range(2):
                 _, trainer, data = _make_portfolio_problem(self.n, self.N)
@@ -388,14 +252,6 @@ class TestStrategyCrossSettings(unittest.TestCase):
                 results[0], results[1],
                 err_msg=f"Strategy '{strategy}' not deterministic",
             )
-
-    def test_pi_adam_optimizer(self):
-        """PI strategy should work with Adam optimizer."""
-        settings = _base_settings(self.data, self.n, self.N)
-        settings.dual_update_strategy = "pi"
-        settings.optimizer = "Adam"
-        result = self.trainer.train(settings=settings)
-        self.assertIsNotNone(result.df)
 
     def test_adaptive_adam_optimizer(self):
         """Adaptive strategy should work with Adam optimizer."""
